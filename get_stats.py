@@ -1,4 +1,4 @@
-import pytest
+import logging
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -6,12 +6,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
-import logging
 import os
 
 class IXLStatsScraper:
-    @pytest.fixture(autouse=True)
-    def setup(self):
+    def __init__(self):
         chrome_options = Options()
         chrome_options.add_argument("--headless")
         chrome_options.add_argument("--no-sandbox")
@@ -20,8 +18,10 @@ class IXLStatsScraper:
         self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
         self.driver.set_window_size(1920, 1080)
         self.wait = WebDriverWait(self.driver, 10)
-        yield
-        self.driver.quit()
+
+    def __del__(self):
+        if hasattr(self, 'driver'):
+            self.driver.quit()
 
     def get_stats(self):
         logging.basicConfig(level=logging.INFO)
@@ -61,7 +61,8 @@ class IXLStatsScraper:
 
         except Exception as e:
             logger.error(f"An error occurred: {str(e)}")
-            self.driver.save_screenshot("error_screenshot.png")
+            if hasattr(self, 'driver'):
+                self.driver.save_screenshot("error_screenshot.png")
             raise
 
     def log_stats(self, logger):
