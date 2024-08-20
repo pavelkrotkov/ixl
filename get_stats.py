@@ -70,6 +70,11 @@ class IXLStatsScraper:
         time.sleep(5)
         name = self.wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".title-start"))).text
         summary = self.wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".summary-stat-container"))).text
+        
+        # Clean the strings: remove newlines and extra whitespace
+        name = ' '.join(name.split())
+        summary = ' '.join(summary.split())
+        
         logger.info(f"{name} {summary}")
 
 if __name__ == "__main__":
