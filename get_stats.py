@@ -155,7 +155,18 @@ class IXLStatsScraper:
 
             self.login(username, password)
             self.select_date_range("Today")
-            self.select_students()
+            # self.select_students()
+
+            self.wait.until(EC.element_to_be_clickable((By.XPATH, "//div[2]/span"))).click()
+            self.wait.until(EC.element_to_be_clickable((By.XPATH, "//div[2]/div/div[2]"))).click()
+            # Extract and log first set of stats
+            self.process_student_data('Rita')
+            # Navigate to next set of stats
+            self.wait.until(EC.element_to_be_clickable((By.XPATH, "//div/span[2]"))).click()
+            self.wait.until(EC.element_to_be_clickable((By.XPATH, "//div[2]/div/div[3]"))).click()
+            # Extract and log second set of stats
+            self.process_student_data('Maya')
+
 
         except Exception as e:
             self.logger.error(f"An error occurred during stats collection: {str(e)}")
