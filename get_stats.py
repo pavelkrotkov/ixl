@@ -39,22 +39,12 @@ class IXLStatsScraper:
             self.wait.until(EC.presence_of_element_located((By.ID, "qlpassword"))).send_keys(password)
             self.wait.until(EC.element_to_be_clickable((By.ID, "qlsubmit"))).click()
 
-            # Navigate and select options
+            # Select parent
             self.wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, ".field:nth-child(4) .avatar-image"))).click()
             self.wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, ".select-title > .option-selection"))).click()
             self.wait.until(EC.element_to_be_clickable((By.XPATH, "//div/div/div/div[2]/div/div[2]"))).click()
-            self.wait.until(EC.element_to_be_clickable((By.XPATH, "//div[2]/span"))).click()
-            self.wait.until(EC.element_to_be_clickable((By.XPATH, "//div[2]/div/div[2]"))).click()
 
-            # Extract and log first set of stats
-            self.log_stats(logger)
-
-            # Navigate to next set of stats
-            self.wait.until(EC.element_to_be_clickable((By.XPATH, "//div/span[2]"))).click()
-            self.wait.until(EC.element_to_be_clickable((By.XPATH, "//div[2]/div/div[3]"))).click()
-
-            # Extract and log second set of stats
-            self.log_stats(logger)
+            self.select_students()
 
             # Logout
             self.wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "#user-nav-wrapper > .display-name"))).click()
@@ -76,6 +66,64 @@ class IXLStatsScraper:
         summary = ' '.join(summary.split())
         
         logger.info(f"{name} {summary}")
+
+    def select_students(self):
+        try:
+            # Wait for and locate the specific dropdown
+            dropdown = WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, ".option-select.global.default.active"))
+            )
+
+            # Open the dropdown
+            dropdown_opener = dropdown.find_element(By.CSS_SELECTOR, ".select-title .prompt-query-or-selection-wrapper")
+            ActionChains(self.driver).move_to_element(dropdown_opener).click().perform()
+
+            # Get all student options
+            student_options = WebDriverWait(self.driver, 10).until(
+                EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".option-select.global.default.active .select-dropdown .option"))
+            )
+
+            for student in student_options:
+                student_name = student.get_attribute('data-name')
+                self.logger.info(f"Selecting student: {student_name}")
+
+                # Click the student option
+                ActionChains(self.driver).move_to_element(student).click().perform()
+
+                # Wait for page to load after selection
+                WebDriverWait(self.driver, 10).until(
+                    EC.text_to_be_present_in_element(
+                        (By.CSS_SELECTOR, ".option-select.global.default.active .select-title .option-selection"),
+                        student_name
+                    )
+                )
+
+                # Perform actions for this student
+                self.process_student_data(student_name)
+
+                # Reopen the dropdown for the next iteration
+                if student != student_options[-1]:  # Don't reopen for the last student
+                    # Re-locate the dropdown opener as the page might have refreshed
+                    dropdown_opener = WebDriverWait(self.driver, 10).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, ".option-select.global.default.active .select-title .prompt-query-or-selection-wrapper"))
+                    )
+                    ActionChains(self.driver).move_to_element(dropdown_opener).click().perform()
+
+        except TimeoutException:
+            self.logger.error("Timeout occurred while trying to interact with the student dropdown")
+            self.driver.save_screenshot("dropdown_error.png")
+        except StaleElementReferenceException:
+            self.logger.error("The page structure changed unexpectedly during student selection")
+            self.driver.save_screenshot("stale_element_error.png")
+        except Exception as e:
+            self.logger.error(f"An error occurred while selecting students: {str(e)}")
+            self.driver.save_screenshot("student_selection_error.png")
+
+    def process_student_data(self, student_name):
+        # Implement the logic to process data for each student
+        self.logger.info(f"Processing data for {student_name}")
+        # Add your data processing logic here
+        self.log_stats()  
 
 if __name__ == "__main__":
     scraper = IXLStatsScraper()
