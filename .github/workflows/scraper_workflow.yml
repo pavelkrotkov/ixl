@@ -2,7 +2,9 @@ name: Run IXL Stats Scraper
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # Runs at 00:00 UTC every day
+    - cron: '0 22 * * *'  # Runs at 00:00 UTC every day
+  pull_request:
+    branches: [main]  # Triggers on PRs to main branch  
   workflow_dispatch:  # Allows manual triggering
 
 jobs:
