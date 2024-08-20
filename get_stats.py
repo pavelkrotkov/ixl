@@ -7,6 +7,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 import os
+import time
 
 class IXLStatsScraper:
     def __init__(self):
@@ -66,6 +67,7 @@ class IXLStatsScraper:
             raise
 
     def log_stats(self, logger):
+        time.sleep(5)
         name = self.wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".title-start"))).text
         summary = self.wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".summary-stat-container"))).text
         logger.info(f"{name} {summary}")
