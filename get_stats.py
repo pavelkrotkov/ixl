@@ -9,6 +9,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
 from webdriver_manager.chrome import ChromeDriverManager
 import os
+import time
 
 class IXLStatsScraper:
     def __init__(self):
@@ -95,11 +96,15 @@ class IXLStatsScraper:
 
     def select_students(self):
         try:
-            dropdown = self.wait.until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, ".option-select.global.default.active"))
+            name_dropdown = self.wait.until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, ".student-select .option-select.global"))
             )
-            dropdown_opener = dropdown.find_element(By.CSS_SELECTOR, ".select-title .prompt-query-or-selection-wrapper")
+            dropdown_opener = name_dropdown.find_element(By.CSS_SELECTOR, ".select-open")
             ActionChains(self.driver).move_to_element(dropdown_opener).click().perform()
+
+            self.wait.until(
+                EC.visibility_of_element_located((By.CSS_SELECTOR, ".student-select .select-body"))
+            )
 
             student_options = self.wait.until(
                 EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".option-select.global.default.active .select-dropdown .option"))
@@ -112,7 +117,7 @@ class IXLStatsScraper:
 
                 self.wait.until(
                     EC.text_to_be_present_in_element(
-                        (By.CSS_SELECTOR, ".option-select.global.default.active .select-title .option-selection"),
+                        (By.CSS_SELECTOR, ".student-select .option-selection"),
                         student_name
                     )
                 )
@@ -120,10 +125,19 @@ class IXLStatsScraper:
                 self.process_student_data(student_name)
 
                 if student != student_options[-1]:
-                    dropdown_opener = self.wait.until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, ".option-select.global.default.active .select-title .prompt-query-or-selection-wrapper"))
+                    name_dropdown = self.wait.until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, ".student-select .option-select.global"))
                     )
+                    dropdown_opener = name_dropdown.find_element(By.CSS_SELECTOR, ".select-open")
                     ActionChains(self.driver).move_to_element(dropdown_opener).click().perform()
+
+                    self.wait.until(
+                        EC.visibility_of_element_located((By.CSS_SELECTOR, ".student-select .select-body"))
+                    )
+
+                    student_options = self.wait.until(
+                        EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".option-select.global.default.active .select-dropdown .option"))
+                    )
 
         except Exception as e:
             self.logger.error(f"Error in selecting students: {str(e)}")
@@ -132,6 +146,8 @@ class IXLStatsScraper:
 
     def process_student_data(self, student_name):
         try:
+            time.sleep(1)
+            
             # Wait for the stats to load
             self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, ".summary-stat-container")))
             
@@ -142,7 +158,7 @@ class IXLStatsScraper:
             # Clean up the text (remove newlines and extra spaces)
             stats_text = ' '.join(stats_text.split())
             
-            self.logger.info(f"Stats for {student_name}: {stats_text}")
+            self.logger.info(f"Stats for {student_name}: {stats_text.lower()}")
         except Exception as e:
             self.logger.error(f"Error processing data for {student_name}: {str(e)}")
 
@@ -155,18 +171,7 @@ class IXLStatsScraper:
 
             self.login(username, password)
             self.select_date_range("Today")
-            # self.select_students()
-
-            self.wait.until(EC.element_to_be_clickable((By.XPATH, "//div[2]/span"))).click()
-            self.wait.until(EC.element_to_be_clickable((By.XPATH, "//div[2]/div/div[2]"))).click()
-            # Extract and log first set of stats
-            self.process_student_data('Rita')
-            # Navigate to next set of stats
-            self.wait.until(EC.element_to_be_clickable((By.XPATH, "//div/span[2]"))).click()
-            self.wait.until(EC.element_to_be_clickable((By.XPATH, "//div[2]/div/div[3]"))).click()
-            # Extract and log second set of stats
-            self.process_student_data('Maya')
-
+            self.select_students()
 
         except Exception as e:
             self.logger.error(f"An error occurred during stats collection: {str(e)}")
