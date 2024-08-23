@@ -8,12 +8,17 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import TimeoutException
 import os
+import sys
 import time
 
 class IXLStatsScraper:
     def __init__(self):
         self.setup_logger()
         self.setup_driver()
+
+    def is_running_interactively():
+        # Check if the script is running in an interactive Python environment
+        return hasattr(sys, 'ps1')
 
     def setup_logger(self):
         self.logger = logging.getLogger(__name__)
@@ -26,7 +31,9 @@ class IXLStatsScraper:
 
     def setup_driver(self):
         chrome_options = Options()
-        chrome_options.add_argument("--headless")
+        # Set headless mode only if not running interactively
+        if not is_running_interactively():
+            chrome_options.add_argument("--headless")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         if os.environ.get('GITHUB_ACTIONS'):
