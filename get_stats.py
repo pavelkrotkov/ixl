@@ -30,7 +30,15 @@ class IXLStatsScraper:
         chrome_options.add_argument("--headless")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
-        self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+        if os.environ.get('GITHUB_ACTIONS'):
+            # Running in GitHub Actions
+            service = Service("chromedriver")
+        else:
+            # Local development
+            from webdriver_manager.chrome import ChromeDriverManager
+            service = Service(ChromeDriverManager().install())
+
+        self.driver = webdriver.Chrome(service=service, options=chrome_options)
         self.driver.set_window_size(1920, 1080)
         self.wait = WebDriverWait(self.driver, 10)
         self.logger.info("WebDriver setup completed")
