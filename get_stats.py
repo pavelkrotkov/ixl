@@ -27,7 +27,6 @@ class IXLStatsScraper:
 
     def setup_driver(self):
         chrome_options = Options()
-        # Set headless mode only if not running interactively
         if not hasattr(sys, 'ps1'):
             chrome_options.add_argument("--headless")
         chrome_options.add_argument("--no-sandbox")
@@ -45,30 +44,41 @@ class IXLStatsScraper:
         self.wait = WebDriverWait(self.driver, 10)
         self.logger.info("WebDriver setup completed")
 
+    def find_element(self, by, value, timeout=10):
+        try:
+            return WebDriverWait(self.driver, timeout).until(
+                EC.presence_of_element_located((by, value))
+            )
+        except TimeoutException:
+            self.logger.error(f"Element not found: {by}={value}")
+            self.driver.save_screenshot(f"element_not_found_{value}.png")
+            raise
+
+    def click_element(self, by, value, timeout=10):
+        try:
+            element = WebDriverWait(self.driver, timeout).until(
+                EC.element_to_be_clickable((by, value))
+            )
+            ActionChains(self.driver).move_to_element(element).click().perform()
+        except TimeoutException:
+            self.logger.error(f"Element not clickable: {by}={value}")
+            self.driver.save_screenshot(f"element_not_clickable_{value}.png")
+            raise
+
     def login(self, username, password):
         try:
             self.driver.get("https://www.ixl.com/analytics/student-usage#")
-            self.wait.until(EC.presence_of_element_located((By.ID, "qlusername"))).send_keys(username)
-            self.wait.until(EC.presence_of_element_located((By.ID, "qlpassword"))).send_keys(password)
-            self.wait.until(EC.element_to_be_clickable((By.ID, "qlsubmit"))).click()
+            self.find_element(By.ID, "qlusername").send_keys(username)
+            self.find_element(By.ID, "qlpassword").send_keys(password)
+            self.click_element(By.ID, "qlsubmit")
             self.logger.info("Successfully logged in")
 
-            # Wait for the subaccount selection to be available
-            self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "label[data-cy^='subaccount-selection-']")))
-
-            # Select the 'Parent' subaccount
-            try:
-                parent_subaccount = self.wait.until(EC.element_to_be_clickable(
-                    (By.XPATH, "//label[contains(@data-cy, 'subaccount-selection-') and .//span[text()='Parent']]")
-                ))
-                parent_subaccount.click()
-                self.logger.info("Selected 'Parent' subaccount")
-            except (TimeoutException, NoSuchElementException):
-                self.logger.error("Failed to find or click 'Parent' subaccount")
-                raise
-
-            # Wait for the page to load after selecting the subaccount
-            self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, ".date-range")))
+            self.find_element(By.CSS_SELECTOR, "label[data-cy^='subaccount-selection-']")
+            parent_subaccount = self.find_element(
+                By.XPATH, "//label[contains(@data-cy, 'subaccount-selection-') and .//span[text()='Parent']]"
+            )
+            parent_subaccount.click()
+            self.logger.info("Selected 'Parent' subaccount")
 
         except Exception as e:
             self.logger.error(f"Login or subaccount selection failed: {str(e)}")
@@ -77,27 +87,14 @@ class IXLStatsScraper:
 
     def select_date_range(self, option="Today"):
         try:
-            date_dropdown = self.wait.until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, ".date-range .option-select.global"))
-            )
-            dropdown_opener = date_dropdown.find_element(By.CSS_SELECTOR, ".select-open")
-            ActionChains(self.driver).move_to_element(dropdown_opener).click().perform()
-
-            self.wait.until(
-                EC.visibility_of_element_located((By.CSS_SELECTOR, ".date-range .select-body"))
-            )
-
-            date_option = self.wait.until(
-                EC.element_to_be_clickable((By.XPATH, f"//div[@class='option' and contains(text(), '{option}')]"))
-            )
-            ActionChains(self.driver).move_to_element(date_option).click().perform()
-
-            self.wait.until(
-                EC.text_to_be_present_in_element(
-                    (By.CSS_SELECTOR, ".date-range .option-selection"),
-                    option
-                )
-            )
+            # Added: Check for presence of date range element
+            self.find_element(By.CSS_SELECTOR, ".date-range")
+            self.click_element(By.CSS_SELECTOR, ".date-range .option-select.global .select-open")
+            self.find_element(By.CSS_SELECTOR, ".date-range .select-body")
+            self.click_element(By.XPATH, f"//div[@class='option' and contains(text(), '{option}')]")
+            self.wait.until(EC.text_to_be_present_in_element(
+                (By.CSS_SELECTOR, ".date-range .option-selection"), option
+            ))
             self.logger.info(f"Selected date range: {option}")
         except Exception as e:
             self.logger.error(f"Failed to select date range: {str(e)}")
@@ -106,49 +103,22 @@ class IXLStatsScraper:
 
     def select_students(self):
         try:
-            name_dropdown = self.wait.until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, ".student-select .option-select.global"))
-            )
-            dropdown_opener = name_dropdown.find_element(By.CSS_SELECTOR, ".select-open")
-            ActionChains(self.driver).move_to_element(dropdown_opener).click().perform()
-
-            self.wait.until(
-                EC.visibility_of_element_located((By.CSS_SELECTOR, ".student-select .select-body"))
-            )
-
-            student_options = self.wait.until(
-                EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".option-select.global.default.active .select-dropdown .option"))
-            )
+            self.click_element(By.CSS_SELECTOR, ".student-select .option-select.global .select-open")
+            self.find_element(By.CSS_SELECTOR, ".student-select .select-body")
+            student_options = self.driver.find_elements(By.CSS_SELECTOR, ".option-select.global.default.active .select-dropdown .option")
 
             for student in student_options:
                 student_name = student.get_attribute('data-name')
                 self.logger.info(f"Selecting student: {student_name}")
-                ActionChains(self.driver).move_to_element(student).click().perform()
-
-                self.wait.until(
-                    EC.text_to_be_present_in_element(
-                        (By.CSS_SELECTOR, ".student-select .option-selection"),
-                        student_name
-                    )
-                )
-
+                student.click()
+                self.wait.until(EC.text_to_be_present_in_element(
+                    (By.CSS_SELECTOR, ".student-select .option-selection"), student_name
+                ))
                 self.process_student_data(student_name)
-
                 if student != student_options[-1]:
-                    name_dropdown = self.wait.until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, ".student-select .option-select.global"))
-                    )
-                    dropdown_opener = name_dropdown.find_element(By.CSS_SELECTOR, ".select-open")
-                    ActionChains(self.driver).move_to_element(dropdown_opener).click().perform()
-
-                    self.wait.until(
-                        EC.visibility_of_element_located((By.CSS_SELECTOR, ".student-select .select-body"))
-                    )
-
-                    student_options = self.wait.until(
-                        EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".option-select.global.default.active .select-dropdown .option"))
-                    )
-
+                    self.click_element(By.CSS_SELECTOR, ".student-select .option-select.global .select-open")
+                    self.find_element(By.CSS_SELECTOR, ".student-select .select-body")
+                    student_options = self.driver.find_elements(By.CSS_SELECTOR, ".option-select.global.default.active .select-dropdown .option")
         except Exception as e:
             self.logger.error(f"Error in selecting students: {str(e)}")
             self.driver.save_screenshot("student_selection_error.png")
@@ -157,17 +127,8 @@ class IXLStatsScraper:
     def process_student_data(self, student_name):
         try:
             time.sleep(1)
-            
-            # Wait for the stats to load
-            self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, ".summary-stat-container")))
-            
-            # Extract the stats
-            stats_element = self.driver.find_element(By.CSS_SELECTOR, ".summary-stat-container")
-            stats_text = stats_element.text
-            
-            # Clean up the text (remove newlines and extra spaces)
-            stats_text = ' '.join(stats_text.split())
-            
+            stats_element = self.find_element(By.CSS_SELECTOR, ".summary-stat-container")
+            stats_text = ' '.join(stats_element.text.split())
             self.logger.info(f"Stats for {student_name}: {stats_text.lower()}")
         except Exception as e:
             self.logger.error(f"Error processing data for {student_name}: {str(e)}")
@@ -182,7 +143,6 @@ class IXLStatsScraper:
             self.login(username, password)
             self.select_date_range("Today")
             self.select_students()
-
         except Exception as e:
             self.logger.error(f"An error occurred during stats collection: {str(e)}")
         finally:
