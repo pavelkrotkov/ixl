@@ -2,7 +2,7 @@ name: Run IXL Stats Scraper
 
 on:
   schedule:
-    - cron: '0 22 * * *'  # Runs at 00:00 UTC every day
+    - cron: '59 23 * * *'  # Runs at 23:59 UTC every day
   pull_request:
     branches: [main]  # Triggers on PRs to main branch  
   workflow_dispatch:  # Allows manual triggering
@@ -32,6 +32,11 @@ jobs:
       env:
         IXL_USERNAME: ${{ secrets.IXL_USERNAME }}
         IXL_PASSWORD: ${{ secrets.IXL_PASSWORD }}
+        HEADLESS: 'true'
+        SEND_EMAIL: ${{ github.event_name == 'schedule' }}
+        GMAIL_USER: ${{ secrets.GMAIL_USER }}
+        GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        RECIPIENT_EMAILS: ${{ secrets.RECIPIENT_EMAILS }}
       run: python get_stats.py
 
     - name: Upload screenshot on failure

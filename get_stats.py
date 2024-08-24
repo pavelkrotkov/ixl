@@ -1,4 +1,9 @@
 import logging
+import os
+import time
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -7,14 +12,13 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
-import os
-import sys
-import time
+from bs4 import BeautifulSoup
 
 class IXLStatsScraper:
     def __init__(self):
         self.setup_logger()
         self.setup_driver()
+        self.student_data = {}
 
     def setup_logger(self):
         self.logger = logging.getLogger(__name__)
@@ -157,6 +161,7 @@ class IXLStatsScraper:
             stats_element = self.find_element(By.CSS_SELECTOR, ".summary-stat-container")
             stats_text = ' '.join(stats_element.text.split())
             self.logger.info(f"Stats for {student_name}: {stats_text.lower()}")
+            self.student_data[student_name] = {'stats': stats_text.lower()}
         except Exception as e:
             self.logger.error(f"Error processing data for {student_name}: {str(e)}")
 
@@ -169,7 +174,13 @@ class IXLStatsScraper:
             # Wait for the table to load
             table = self.find_element(By.CSS_SELECTOR, ".student-improvement-table")
 
-            # Extract and log the table data
+            # Get the HTML of the table
+            table_html = table.get_attribute('outerHTML')
+
+            # Store the table HTML in the student_data dictionary
+            self.student_data[student_name]['progress_table'] = table_html
+
+            # Extract and log the table data (for console output)
             rows = table.find_elements(By.CSS_SELECTOR, ".skill-row")
             for row in rows:
                 skill_name = row.find_element(By.CSS_SELECTOR, ".skill-name-and-permacode span").text
@@ -191,8 +202,100 @@ class IXLStatsScraper:
             self.logger.error(f"Error extracting progress and improvement data for {student_name}: {str(e)}")
             self.driver.save_screenshot(f"progress_improvement_error_{student_name}.png")
             raise
+
+    def process_table_html(self, table_html):
+        soup = BeautifulSoup(table_html, 'html.parser')
         
-    def get_stats(self):
+        # Create a new table
+        new_table = soup.new_tag('table')
+        new_table['style'] = 'border-collapse: collapse; width: 100%;'
+        
+        # Add header row
+        header = soup.new_tag('tr')
+        headers = ['Subject/Category/Skill', 'Code', 'Time Spent', '#', 'Score Improvement']
+        for h in headers:
+            th = soup.new_tag('th')
+            th.string = h
+            th['style'] = 'border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2;'
+            header.append(th)
+        new_table.append(header)
+
+        # Process rows
+        for row in soup.select('div[class*="row"]'):
+            new_row = soup.new_tag('tr')
+            
+            if 'subject-grade-row' in row.get('class', []):
+                td = soup.new_tag('td')
+                td.string = row.text.strip()
+                td['colspan'] = '5'
+                td['style'] = 'border: 1px solid #ddd; padding: 8px; font-weight: bold; background-color: #e6e6e6;'
+                new_row.append(td)
+            elif 'category-row' in row.get('class', []):
+                td = soup.new_tag('td')
+                td.string = row.text.strip()
+                td['colspan'] = '5'
+                td['style'] = 'border: 1px solid #ddd; padding: 8px; font-style: italic; background-color: #f9f9f9;'
+                new_row.append(td)
+            elif 'skill-row' in row.get('class', []):
+                cells = [
+                    row.select_one('.skill-name-and-permacode span'),
+                    row.select_one('.permacode'),
+                    row.select_one('.skill-time'),
+                    row.select_one('.skill-questions'),
+                    row.select('.skill-improvement .score')
+                ]
+                
+                for i, cell in enumerate(cells):
+                    td = soup.new_tag('td')
+                    td['style'] = 'border: 1px solid #ddd; padding: 8px;'
+                    if i == 4 and cell:  # Score Improvement
+                        td.string = f"{cell[0].text} to {cell[1].text}" if len(cell) == 2 else "N/A"
+                    elif cell:
+                        td.string = cell.text.strip()
+                    else:
+                        td.string = "N/A"
+                    new_row.append(td)
+            
+            new_table.append(new_row)
+
+        return str(new_table)
+
+    def send_email(self):
+        gmail_user = os.environ.get('GMAIL_USER')
+        gmail_app_password = os.environ.get('GMAIL_APP_PASSWORD')
+        recipients = os.environ.get('RECIPIENT_EMAILS', '').split(',')
+
+        if not all([gmail_user, gmail_app_password, recipients]):
+            self.logger.error("Email configuration is incomplete. Skipping email send.")
+            return
+
+        message = MIMEMultipart("alternative")
+        message["Subject"] = "IXL Stats Report"
+        message["From"] = gmail_user
+        message["To"] = ", ".join(recipients)
+
+        html_content = "<html><body>"
+
+        for student, data in self.student_data.items():
+            html_content += f"<h2>{student}</h2>"
+            html_content += f"<p>{data['stats']}</p>"
+            html_content += f"<h3>Progress and Improvement</h3>"
+            html_content += self.process_table_html(data['progress_table'])
+            html_content += "<hr>"
+
+        html_content += "</body></html>"
+
+        message.attach(MIMEText(html_content, "html"))
+
+        try:
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+                server.login(gmail_user, gmail_app_password)
+                server.sendmail(gmail_user, recipients, message.as_string())
+            self.logger.info(f"Email sent successfully to {', '.join(recipients)}")
+        except Exception as e:
+            self.logger.error(f"Failed to send email: {str(e)}")
+       
+    def get_stats(self, send_email=False):
         try:
             username = os.environ.get('IXL_USERNAME')
             password = os.environ.get('IXL_PASSWORD')
@@ -202,6 +305,9 @@ class IXLStatsScraper:
             self.login(username, password)
             self.select_date_range("Today")
             self.select_students()
+
+            if send_email:
+                self.send_email()
         except Exception as e:
             self.logger.error(f"An error occurred during stats collection: {str(e)}")
         finally:
@@ -210,4 +316,5 @@ class IXLStatsScraper:
 
 if __name__ == "__main__":
     scraper = IXLStatsScraper()
-    scraper.get_stats()
+    send_email = os.environ.get('SEND_EMAIL', 'false').lower() == 'true'
+    scraper.get_stats(send_email=send_email)
