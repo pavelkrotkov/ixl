@@ -6,7 +6,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.action_chains import ActionChains
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
 import os
 import sys
 import time
@@ -102,28 +102,54 @@ class IXLStatsScraper:
             self.driver.save_screenshot("date_range_error.png")
             raise
 
+    def get_student_options(self):
+        self.click_element(By.CSS_SELECTOR, ".student-select .option-select.global .select-open")
+        self.find_element(By.CSS_SELECTOR, ".student-select .select-body")
+        return self.driver.find_elements(By.CSS_SELECTOR, ".option-select.global.default.active .select-dropdown .option")
+        
+    def select_student(self, student_name):
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            try:
+                student_options = self.get_student_options()
+                for student in student_options:
+                    if student.get_attribute('data-name') == student_name:
+                        student.click()
+                        self.wait.until(EC.text_to_be_present_in_element(
+                            (By.CSS_SELECTOR, ".student-select .option-selection"), student_name
+                        ))
+                        return True
+                return False
+            except StaleElementReferenceException:
+                if attempt < max_attempts - 1:
+                    self.logger.warning(f"Stale element encountered when selecting {student_name}. Retrying...")
+                    time.sleep(1)
+                else:
+                    self.logger.error(f"Failed to select student {student_name} after {max_attempts} attempts.")
+                    return False
+
     def select_students(self):
         try:
-            self.click_element(By.CSS_SELECTOR, ".student-select .option-select.global .select-open")
-            self.find_element(By.CSS_SELECTOR, ".student-select .select-body")
-            student_options = self.driver.find_elements(By.CSS_SELECTOR, ".option-select.global.default.active .select-dropdown .option")
+            student_options = self.get_student_options()
+            student_names = [student.get_attribute('data-name') for student in student_options]
+            if len(student_options):
+                student_options[0].click()
 
-            for student in student_options:
-                student_name = student.get_attribute('data-name')
-                self.logger.info(f"Selecting student: {student_name}")
-                student.click()
-                self.wait.until(EC.text_to_be_present_in_element(
-                    (By.CSS_SELECTOR, ".student-select .option-selection"), student_name
-                ))
-                self.process_student_data(student_name)
-                if student != student_options[-1]:
-                    self.click_element(By.CSS_SELECTOR, ".student-select .option-select.global .select-open")
-                    self.find_element(By.CSS_SELECTOR, ".student-select .select-body")
-                    student_options = self.driver.find_elements(By.CSS_SELECTOR, ".option-select.global.default.active .select-dropdown .option")
+            for student_name in student_names:
+                self.logger.info(f"Processing student: {student_name}")
+                if self.select_student(student_name):
+                    self.process_student_data(student_name)
+                    self.get_progress_and_improvement_data(student_name)
+                    # Navigate back to the main analytics page
+                    self.driver.get("https://www.ixl.com/analytics/student-usage#")
+                else:
+                    self.logger.warning(f"Failed to select student: {student_name}")
+
         except Exception as e:
             self.logger.error(f"Error in selecting students: {str(e)}")
             self.driver.save_screenshot("student_selection_error.png")
             raise
+
 
     def process_student_data(self, student_name):
         try:
@@ -134,6 +160,38 @@ class IXLStatsScraper:
         except Exception as e:
             self.logger.error(f"Error processing data for {student_name}: {str(e)}")
 
+    def get_progress_and_improvement_data(self, student_name):
+        try:
+            self.driver.get("https://www.ixl.com/analytics/progress-and-improvement")
+            self.logger.info(f"Navigated to Progress and Improvement page for {student_name}")
+            time.sleep(3)
+            
+            # Wait for the table to load
+            table = self.find_element(By.CSS_SELECTOR, ".student-improvement-table")
+
+            # Extract and log the table data
+            rows = table.find_elements(By.CSS_SELECTOR, ".skill-row")
+            for row in rows:
+                skill_name = row.find_element(By.CSS_SELECTOR, ".skill-name-and-permacode span").text
+                skill_code = row.find_element(By.CSS_SELECTOR, ".permacode").text
+                time_spent = row.find_element(By.CSS_SELECTOR, ".skill-time").text
+                questions = row.find_element(By.CSS_SELECTOR, ".skill-questions").text
+                scores = [x.text for x in row.find_elements(By.CSS_SELECTOR, ".skill-improvement .score")]
+                score_from = scores[0]
+                score_to = scores[1]
+
+                log_message = f"{student_name} - Skill: {skill_name} ({skill_code}), Time: {time_spent}, Questions: {questions}, Improvement: {score_from} to {score_to}"
+                self.logger.info(log_message)
+
+            # Navigate back to the main analytics page
+            self.driver.get("https://www.ixl.com/analytics/student-usage#")
+            self.logger.info(f"Navigated back to main analytics page for {student_name}")
+
+        except Exception as e:
+            self.logger.error(f"Error extracting progress and improvement data for {student_name}: {str(e)}")
+            self.driver.save_screenshot(f"progress_improvement_error_{student_name}.png")
+            raise
+        
     def get_stats(self):
         try:
             username = os.environ.get('IXL_USERNAME')
