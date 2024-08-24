@@ -27,7 +27,8 @@ class IXLStatsScraper:
 
     def setup_driver(self):
         chrome_options = Options()
-        if not hasattr(sys, 'ps1'):
+        headless_mode = os.environ.get('HEADLESS', 'true').lower() == 'true'
+        if headless_mode:
             chrome_options.add_argument("--headless")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
@@ -42,7 +43,7 @@ class IXLStatsScraper:
         self.driver = webdriver.Chrome(service=service, options=chrome_options)
         self.driver.set_window_size(1920, 1080)
         self.wait = WebDriverWait(self.driver, 10)
-        self.logger.info("WebDriver setup completed")
+        self.logger.info(f"WebDriver setup completed. Headless mode: {headless_mode}")
 
     def find_element(self, by, value, timeout=10):
         try:
@@ -51,7 +52,7 @@ class IXLStatsScraper:
             )
         except TimeoutException:
             self.logger.error(f"Element not found: {by}={value}")
-            self.driver.save_screenshot(f"element_not_found_{value}.png")
+            self.driver.save_screenshot(f"element_not_found_{value.replace(' ', '_')}.png")
             raise
 
     def click_element(self, by, value, timeout=10):
