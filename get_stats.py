@@ -8,7 +8,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
 import os
-import sys
+import pandas as pd
 import time
 
 class IXLStatsScraper:
@@ -169,7 +169,8 @@ class IXLStatsScraper:
             # Wait for the table to load
             table = self.find_element(By.CSS_SELECTOR, ".student-improvement-table")
 
-            # Extract and log the table data
+            # Extract and store the table data
+            data = []
             rows = table.find_elements(By.CSS_SELECTOR, ".skill-row")
             for row in rows:
                 skill_name = row.find_element(By.CSS_SELECTOR, ".skill-name-and-permacode span").text
@@ -180,18 +181,32 @@ class IXLStatsScraper:
                 score_from = scores[0]
                 score_to = scores[1]
 
-                log_message = f"{student_name} - Skill: {skill_name} ({skill_code}), Time: {time_spent}, Questions: {questions}, Improvement: {score_from} to {score_to}"
-                self.logger.info(log_message)
+                data.append({
+                    'Skill': skill_name,
+                    'Code': skill_code,
+                    'Time Spent': time_spent,
+                    'Questions': questions,
+                    'Score From': score_from,
+                    'Score To': score_to
+                })
+
+            # Convert data to pandas DataFrame
+            df = pd.DataFrame(data)
+
+            # Print the DataFrame
+            print(df.to_string(index=False))
 
             # Navigate back to the main analytics page
             self.driver.get("https://www.ixl.com/analytics/student-usage#")
             self.logger.info(f"Navigated back to main analytics page for {student_name}")
 
+            return df  # Return the DataFrame for further use if needed
+
         except Exception as e:
             self.logger.error(f"Error extracting progress and improvement data for {student_name}: {str(e)}")
             self.driver.save_screenshot(f"progress_improvement_error_{student_name}.png")
             raise
-        
+    
     def get_stats(self):
         try:
             username = os.environ.get('IXL_USERNAME')
