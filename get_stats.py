@@ -150,32 +150,6 @@ class IXLStatsScraper:
             self.driver.save_screenshot("student_selection_error.png")
             raise
 
-    def get_progress_and_improvement_data(self, student_name):
-        try:
-            self.driver.get("https://www.ixl.com/analytics/progress-and-improvement")
-            self.logger.info(f"Navigated to Progress and Improvement page for {student_name}")
-            time.sleep(1)
-            
-            # Wait for the table to load
-            table = self.find_element(By.CSS_SELECTOR, ".student-improvement-table")
-
-            # Extract and log the table data
-            rows = table.find_elements(By.CSS_SELECTOR, ".skill-row")
-            for row in rows:
-                skill_name = row.find_element(By.CSS_SELECTOR, ".skill-name-and-permacode span").text
-                skill_code = row.find_element(By.CSS_SELECTOR, ".permacode").text
-                time_spent = row.find_element(By.CSS_SELECTOR, ".skill-time").text
-                questions = row.find_element(By.CSS_SELECTOR, ".skill-questions").text
-                improvement = row.find_element(By.CSS_SELECTOR, ".skill-improvement .score:last-child").text
-
-                log_message = f"{student_name} - Skill: {skill_name} ({skill_code}), Time: {time_spent}, Questions: {questions}, Improvement: {improvement}"
-                self.logger.info(log_message)
-
-        except Exception as e:
-            self.logger.error(f"Error extracting progress and improvement data for {student_name}: {str(e)}")
-            self.driver.save_screenshot(f"progress_improvement_error_{student_name}.png")
-            raise
-
 
     def process_student_data(self, student_name):
         try:
