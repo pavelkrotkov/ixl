@@ -176,8 +176,10 @@ class IXLStatsScraper(BaseStatsScraper):
         try:
             username = os.environ.get('IXL_USERNAME')
             password = os.environ.get('IXL_PASSWORD')
-            if not username or not password:
-                raise ValueError("IXL credentials not set in environment variables")
+            if not username:
+                raise ValueError("IXL_USERNAME not set in environment variables")
+            if not password:
+                raise ValueError("IXL_PASSWORD not set in environment variables")
 
             self.login(username, password)
             self.select_date_range("Today")
@@ -325,8 +327,10 @@ class MathAcademyStatsScraper(BaseStatsScraper):
         try:
             username = os.environ.get('MATHACADEMY_USERNAME')
             password = os.environ.get('MATHACADEMY_PASSWORD')
-            if not username or not password:
-                raise ValueError("Math Academy credentials not set in environment variables")
+            if not username:
+                raise ValueError("MATHACADEMY_USERNAME not set in environment variables")
+            if not password:
+                raise ValueError("MATHACADEMY_PASSWORD not set in environment variables")
 
             self.login(username, password)
             
@@ -336,50 +340,6 @@ class MathAcademyStatsScraper(BaseStatsScraper):
 
         except Exception as e:
             self.logger.error(f"An error occurred during Math Academy stats collection: {str(e)}")
-
-def send_combined_email(ixl_data, math_academy_data):
-    gmail_user = os.environ.get('GMAIL_USER')
-    gmail_app_password = os.environ.get('GMAIL_APP_PASSWORD')
-    recipients = os.environ.get('RECIPIENT_EMAILS', '').split(',')
-
-    if not all([gmail_user, gmail_app_password, recipients]):
-        logging.error("Email configuration is incomplete. Skipping email send.")
-        return
-
-    message = MIMEMultipart("alternative")
-    message["Subject"] = "Combined IXL and Math Academy Report"
-    message["From"] = gmail_user
-    message["To"] = ", ".join(recipients)
-
-    html_content = "<html><body>"
-
-    # IXL Report
-    html_content += "<h3>IXL Report</h3>"
-    for student_name, data in ixl_data.items():
-        html_content += f"<h4>{student_name} {data['stats']}</h4>"
-        if 'progress_table' in data:
-            html_content += data['progress_table']
-
-    # Math Academy Report
-    html_content += "<h3>Math Academy Report</h3>"
-    for student_name, data in math_academy_data.items():
-        html_content += f"<h4>{student_name}: today: {data['daily_xp_earned']}/{data['daily_xp_goal']} XP, this week: {data['weekly_xp']} XP</h4>"
-        
-        parsed_activity = MathAcademyStatsScraper.parse_activity_html(data['activity_html'])
-        formatted_activity = MathAcademyStatsScraper.format_activity_html(parsed_activity)
-        html_content += formatted_activity
-
-    html_content += "</body></html>"
-
-    message.attach(MIMEText(html_content, "html"))
-
-    try:
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login(gmail_user, gmail_app_password)
-            server.sendmail(gmail_user, recipients, message.as_string())
-        logging.info(f"Combined email sent successfully to {', '.join(recipients)}")
-    except Exception as e:
-        logging.error(f"Failed to send combined email: {str(e)}")
 
 def setup_driver():
     chrome_options = Options()
@@ -398,26 +358,89 @@ def setup_driver():
     driver.set_window_size(1920, 1080)
     return driver
 
+def send_email(subject, html_content):
+    gmail_user = os.environ.get('GMAIL_USER')
+    gmail_app_password = os.environ.get('GMAIL_APP_PASSWORD')
+    recipients = os.environ.get('RECIPIENT_EMAILS', '').split(',')
+
+    if not all([gmail_user, gmail_app_password, recipients]):
+        logging.error("Email configuration is incomplete. Skipping email send.")
+        return
+
+    message = MIMEMultipart("alternative")
+    message["Subject"] = subject
+    message["From"] = gmail_user
+    message["To"] = ", ".join(recipients)
+    message.attach(MIMEText(html_content, "html"))
+
+    try:
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(gmail_user, gmail_app_password)
+            server.sendmail(gmail_user, recipients, message.as_string())
+        logging.info(f"Email sent successfully to {', '.join(recipients)}")
+    except Exception as e:
+        logging.error(f"Failed to send email: {str(e)}")
+
+
 def main():
     logger = logging.getLogger(__name__)
     
     driver = setup_driver()
+    ixl_data = {}
+    math_academy_data = {}
     
     try:
-        ixl_scraper = IXLStatsScraper(driver)
-        math_academy_scraper = MathAcademyStatsScraper(driver)
-        
-        ixl_scraper.get_stats()
-        math_academy_scraper.get_stats()
-        
-        send_email = os.environ.get('SEND_EMAIL', 'false').lower() == 'true'
-        if send_email:
-            send_combined_email(ixl_scraper.student_data, math_academy_scraper.student_data)
+        # IXL scraping
+        try:
+            ixl_scraper = IXLStatsScraper(driver)
+            ixl_scraper.get_stats()
+            ixl_data = ixl_scraper.student_data
+            logger.info("IXL scraping completed successfully")
+        except Exception as e:
+            logger.error(f"Error during IXL scraping: {str(e)}")
+
+        # Math Academy scraping
+        try:
+            math_academy_scraper = MathAcademyStatsScraper(driver)
+            math_academy_scraper.get_stats()
+            math_academy_data = math_academy_scraper.student_data
+            logger.info("Math Academy scraping completed successfully")
+        except Exception as e:
+            logger.error(f"Error during Math Academy scraping: {str(e)}")
+
+        # Prepare and send email
+        if ixl_data or math_academy_data:
+            html_content = "<html><body>"
+            if ixl_data:
+                # IXL Report
+                html_content += "<h2>IXL</h2>"
+                for student_name, data in ixl_data.items():
+                    html_content += f"<h3>{student_name} {data['stats']}</h3>"
+                    if 'progress_table' in data:
+                        html_content += data['progress_table']
+            
+            if math_academy_data:
+                # Math Academy Report
+                html_content += "<h2>Math Academy</h2>"
+                for student_name, data in math_academy_data.items():
+                    html_content += f"<h3>{student_name}: today {data['daily_xp_earned']}/{data['daily_xp_goal']} XP, this week {data['weekly_xp']} XP</h3>"
+                    
+                    parsed_activity = MathAcademyStatsScraper.parse_activity_html(data['activity_html'])
+                    formatted_activity = MathAcademyStatsScraper.format_activity_html(parsed_activity)
+                    html_content += formatted_activity
+           
+            html_content += "</body></html>"
+            
+            send_email("IXL and Math Academy Progress Report", html_content)
+        else:
+            logger.warning("No data collected from either IXL or Math Academy. No email sent.")
+    
     except Exception as e:
-        logger.error(f"An error occurred during script execution: {str(e)}")
+        logger.error(f"An unexpected error occurred: {str(e)}")
     finally:
         driver.quit()
         logger.info("Script execution completed.")
+
 
 if __name__ == "__main__":
     main()
