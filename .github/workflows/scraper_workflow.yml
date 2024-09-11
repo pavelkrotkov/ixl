@@ -37,6 +37,9 @@ jobs:
         GMAIL_USER: ${{ secrets.GMAIL_USER }}
         GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
         RECIPIENT_EMAILS: ${{ secrets.RECIPIENT_EMAILS }}
+        MATHACADEMY_USERNAME: ${{ secrets.MATHACADEMY_USERNAME }}
+        MATHACADEMY_PASSWORD: ${{ secrets.MATHACADEMY_PASSWORD }}
+        MATHACADEMY_STUDENT_IDS: ${{ secrets.MATHACADEMY_STUDENT_IDS }}
       run: python get_stats.py
 
     - name: Upload screenshot on failure
