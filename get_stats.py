@@ -381,7 +381,8 @@ class MathAcademyStatsScraper(BaseStatsScraper):
 
         for item in parsed_data:
             if item["type"] == "date":
-                html += f"<tr style='background-color: #e6e6e6;'><td colspan='4'><strong>{item['date']} - {item['xp']}</strong></td></tr>"
+                html += "<tr style='background-color: #e6e6e6;'>"
+                html += f"<td colspan='4'><strong>{item['date']} - {item['xp']}</strong></td></tr>"
             else:
                 html += f"<tr><td>{item['task_type']}</td><td>{item['task_name']}</td><td>{item['completion']}</td><td>{item['points']}</td></tr>"
 
@@ -509,7 +510,10 @@ def main():
 
             html_content += "</body></html>"
 
-            send_email("IXL and Math Academy Progress Report", html_content)
+            if os.environ.get("SEND_EMAIL", "false").lower() == "true":
+                send_email("IXL and Math Academy Progress Report", html_content)
+            else:
+                logger.info("skipping sending email")
         else:
             logger.warning(
                 "No data collected from either IXL or Math Academy. No email sent."

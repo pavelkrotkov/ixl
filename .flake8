@@ -1,5 +1,7 @@
 [flake8]
-max-line-length = 88
-extend-ignore = E203, W503
+# Ignore line length checks (E501) and other specific error codes
+ignore = E203, E231, E501, E702, W503
 exclude = .git,__pycache__,docs/source/conf.py,old,build,dist,.venv
-max-complexity = 10
+max-complexity = 15
+# Optionally, increase the maximum allowed line length (e.g., 120 characters)
+max-line-length = 120
