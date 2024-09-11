@@ -28,6 +28,18 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y google-chrome-stable
 
+    - name: Check credentials
+      run: python check_credentials.py
+      env:
+        IXL_USERNAME: ${{ secrets.IXL_USERNAME }}
+        IXL_PASSWORD: ${{ secrets.IXL_PASSWORD }}
+        GMAIL_USER: ${{ secrets.GMAIL_USER }}
+        GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        RECIPIENT_EMAILS: ${{ secrets.RECIPIENT_EMAILS }}
+        MATHACADEMY_USERNAME: ${{ secrets.MATHACADEMY_USERNAME }}
+        MATHACADEMY_PASSWORD: ${{ secrets.MATHACADEMY_PASSWORD }}
+        MATHACADEMY_STUDENT_IDS: ${{ secrets.MATHACADEMY_STUDENT_IDS }}
+
     - name: Run IXL Stats Scraper
       env:
         IXL_USERNAME: ${{ secrets.IXL_USERNAME }}
@@ -41,7 +53,7 @@ jobs:
         MATHACADEMY_PASSWORD: ${{ secrets.MATHACADEMY_PASSWORD }}
         MATHACADEMY_STUDENT_IDS: ${{ secrets.MATHACADEMY_STUDENT_IDS }}
       run: python get_stats.py
-
+      
     - name: Upload screenshot on failure
       uses: actions/upload-artifact@v2
       if: failure()

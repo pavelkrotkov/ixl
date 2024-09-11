@@ -55,7 +55,7 @@ Optional variables:
 1. Clone the repository
 2. Install dependencies: `pip install -r requirements.txt`
 3. Set up environment variables (use a `.env` file or export them in your shell)
-4. Run the script: `python scraper.py`
+4. Run the script: `python get_stats.py`
 
 ## GitHub Actions Setup
 
@@ -71,7 +71,7 @@ This repository includes a GitHub Actions workflow to run the scraper on a sched
 
 - To add or remove students from the Math Academy scraper, update the `MATHACADEMY_STUDENT_IDS` secret.
 - To change the report recipients, update the `RECIPIENT_EMAILS` secret.
-- To modify the scraping behavior or report format, edit the `scraper.py` file.
+- To modify the scraping behavior or report format, edit the `get_stats.py` file.
 
 ## Troubleshooting
 
