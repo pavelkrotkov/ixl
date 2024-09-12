@@ -55,7 +55,7 @@ jobs:
       run: python get_stats.py
       
     - name: Upload screenshot on failure
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: error-screenshot
