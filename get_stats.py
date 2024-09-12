@@ -346,7 +346,7 @@ class MathAcademyStatsScraper(BaseStatsScraper):
                         xp_span.extract()
                     date = date_td.get_text(strip=True)
                     parsed_data.append({"type": "date", "date": date, "xp": xp})
-            elif date_count < 2:  # Only parse task rows before the second date row
+            elif date_count < 3:  # Only parse task rows before the third date row
                 task_type_td = tr.find("td", class_="taskTypeColumn")
                 task_name_div = tr.find("div", class_="taskName")
                 completion_td = tr.find("td", class_="taskCompletedColumn")
