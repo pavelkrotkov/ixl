@@ -45,7 +45,7 @@ jobs:
         IXL_USERNAME: ${{ secrets.IXL_USERNAME }}
         IXL_PASSWORD: ${{ secrets.IXL_PASSWORD }}
         HEADLESS: 'true'
-        SEND_EMAIL: ${{ github.event_name == 'schedule' }}
+        SEND_EMAIL: 'true'
         GMAIL_USER: ${{ secrets.GMAIL_USER }}
         GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
         RECIPIENT_EMAILS: ${{ secrets.RECIPIENT_EMAILS }}
