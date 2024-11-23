@@ -1,20 +1,23 @@
-#!/usr/bin/env python3
-
+from typing import Union
 import requests
 import pandas as pd
 from bs4 import BeautifulSoup
 
 
-def fetch_ixl_content():
+def get_codes_from_ixl(url: str) -> Union[pd.DataFrame, None]:
+    """
+    Fetches Earth Science skills data from the IXL website and returns it in a DataFrame.
+    If any errors occur during the request or parsing, prints an error message and returns None.
+
+    Returns:
+        A DataFrame containing the skills data, or None if an error occurred.
+    """
     # Headers to mimic browser request
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
     }
 
-    url = "https://www.ixl.com/science/earth-science"
-
     try:
-        print("hi")
         response = requests.get(url, headers=headers)
         response.raise_for_status()  # Raise an exception for bad status codes
         print(response.status_code)
@@ -53,21 +56,55 @@ def fetch_ixl_content():
         # Create DataFrame
         df = pd.DataFrame(skills)
 
-        # Pivot the DataFrame
-        pivot_df = df.pivot(
-            index=["skill_number", "skill_name"], columns="grade", values="permacode"
-        )
-
-        return pivot_df
+        return df
 
     except requests.exceptions.RequestException as e:
         print(f"Error fetching content: {e}")
         return None
 
 
-if __name__ == "__main__":
-    print("hi")
-    # Fetch and display results
-    result_df = fetch_ixl_content()
-    if result_df is not None:
-        print(result_df)
+def earch_science_skills_data() -> Union[pd.DataFrame, None]:
+    # Define the URL of the Earth Science section on the IXL website
+    url = "https://www.ixl.com/science/earth-science"
+
+    # Fetch the data from the URL and store it in a DataFrame
+    df = get_codes_from_ixl(url)
+
+    # Define a mapping from the grade names to their corresponding numeric values
+    grade_map = {
+        "Kindergarten skills": 0,
+        "First-grade skills": 1,
+        "Second-grade skills": 2,
+        "Second-grade skills": 2,
+        "Third-grade skills": 3,
+        "Fourth-grade skills": 4,
+        "Fifth-grade skills": 5,
+        "Sixth-grade skills": 6,
+        "Seventh-grade skills": 7,
+        "Eighth-grade skills": 8,
+    }
+
+    # Map the grade names in the DataFrame to their corresponding numeric values
+    df.grade = df.grade.map(grade_map)
+
+    # Extract the skill number from the skill_number column and store it in a new column called 'skill'
+    df["skill"] = df["skill_number"].str.split(".").str[0]
+
+    # Filter the DataFrame to only include rows with a grade of 6 or higher, and pivot the DataFrame to create a new DataFrame
+    # where each row corresponds to a unique skill, and each column corresponds to a grade
+    pivot_df = df.query("grade >=6").pivot(
+        # index=['skill_name'],
+        index=["skill", "skill_name"],
+        columns="grade",
+        values="permacode",
+    )
+
+    # Fill any missing values in the pivot DataFrame with an empty string
+    return pivot_df.fillna("")
+
+
+def algebra2_skills_data() -> Union[pd.DataFrame, None]:
+    url = "https://www.ixl.com/math/algebra-2"
+    df = get_codes_from_ixl(url)
+
+    return df.set_index(["grade", "skill_number", "skill_name"])
