@@ -53,9 +53,9 @@ Optional variables:
 ### Running Locally
 
 1. Clone the repository
-2. Install dependencies: `pip install -r requirements.txt`
+2. Install dependencies: `uv sync`
 3. Set up environment variables (use a `.env` file or export them in your shell)
-4. Run the script: `python get_stats.py`
+4. Run the script: `uv run python get_stats.py`
 
 ## GitHub Actions Setup
 

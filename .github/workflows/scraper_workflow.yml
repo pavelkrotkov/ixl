@@ -4,24 +4,30 @@ on:
   schedule:
     - cron: '59 23 * * *'  # Runs at 23:59 UTC every day
   pull_request:
-    branches: [main]  # Triggers on PRs to main branch  
+    branches: [main]  # Triggers on PRs to main branch
   workflow_dispatch:  # Allows manual triggering
+
+permissions:
+  contents: read
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      with:
+        persist-credentials: false
 
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
       with:
-        python-version: '3.x'
+        python-version: '3.11'
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
 
     - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+      run: uv sync --locked
 
     - name: Install Chrome
       run: |
@@ -29,7 +35,7 @@ jobs:
         sudo apt-get install -y google-chrome-stable
 
     - name: Check credentials
-      run: python check_credentials.py
+      run: uv run python check_credentials.py
       env:
         IXL_USERNAME: ${{ secrets.IXL_USERNAME }}
         IXL_PASSWORD: ${{ secrets.IXL_PASSWORD }}
@@ -52,10 +58,10 @@ jobs:
         MATHACADEMY_USERNAME: ${{ secrets.MATHACADEMY_USERNAME }}
         MATHACADEMY_PASSWORD: ${{ secrets.MATHACADEMY_PASSWORD }}
         MATHACADEMY_STUDENT_IDS: ${{ secrets.MATHACADEMY_STUDENT_IDS }}
-      run: python get_stats.py
-      
+      run: uv run python get_stats.py
+
     - name: Upload screenshot on failure
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       if: failure()
       with:
         name: error-screenshot
