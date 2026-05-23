@@ -436,13 +436,12 @@ def setup_driver():
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     if os.environ.get("GITHUB_ACTIONS"):
-        service = Service("chromedriver")
+        driver = webdriver.Chrome(options=chrome_options)
     else:
         from webdriver_manager.chrome import ChromeDriverManager
 
         service = Service(ChromeDriverManager().install())
-
-    driver = webdriver.Chrome(service=service, options=chrome_options)
+        driver = webdriver.Chrome(service=service, options=chrome_options)
     driver.set_window_size(1920, 1080)
     return driver
 
