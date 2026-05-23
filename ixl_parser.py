@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 
 
-def process_table_html(table_html):
+def process_table_html(table_html: str) -> str:
     soup = BeautifulSoup(table_html, "html.parser")
 
     # Create a new table
