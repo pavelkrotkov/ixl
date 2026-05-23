@@ -1,0 +1,40 @@
+[project]
+name = "ixl"
+version = "0.1.0"
+description = "IXL and Math Academy web scraper"
+requires-python = ">=3.11"
+dependencies = [
+    "beautifulsoup4>=4.14.3",
+    "pandas>=3.0.3",
+    "requests>=2.34.2",
+    "selenium>=4.44.0",
+    "webdriver-manager>=4.1.1",
+]
+
+[dependency-groups]
+dev = [
+    "pip-audit>=2.10.0",
+    "pre-commit>=4.6.0",
+    "pytest>=9.0.3",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.15.14",
+    "ty>=0.0.39",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--strict-markers", "--strict-config"]
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
