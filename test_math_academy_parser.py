@@ -1,5 +1,4 @@
-from math_academy_parser import parse_activity_html, format_activity_html
-
+from math_academy_parser import format_activity_html, parse_activity_html
 
 SAMPLE_ACTIVITY_HTML = """
 <table id="tasksFrame">

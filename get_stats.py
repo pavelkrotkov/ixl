@@ -16,7 +16,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from math_academy_parser import parse_activity_html, format_activity_html
+from math_academy_parser import format_activity_html, parse_activity_html
 
 # Set up logging once at the module level
 logging.basicConfig(

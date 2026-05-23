@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 
 
-def parse_activity_html(activity_html: str) -> list[dict[str, str]]:
+def parse_activity_html(activity_html: str | None) -> list[dict[str, str]]:
     if not activity_html:
         return []
     soup = BeautifulSoup(activity_html, "html.parser")
@@ -9,7 +9,8 @@ def parse_activity_html(activity_html: str) -> list[dict[str, str]]:
     date_count = 0
 
     for tr in soup.find_all("tr"):
-        if not tr.get("class"):
+        row_classes = tr.get("class", "")
+        if not row_classes:
             date_td = tr.find("td", class_="dateHeader")
             if date_td:
                 date_count += 1
