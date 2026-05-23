@@ -472,9 +472,9 @@ def setup_driver():
 def send_email(subject: str, html_content: str) -> None:
     gmail_user = os.environ.get("GMAIL_USER")
     gmail_app_password = os.environ.get("GMAIL_APP_PASSWORD")
-    recipients = os.environ.get("RECIPIENT_EMAILS", "").split(",")
+    recipients = [r.strip() for r in os.environ.get("RECIPIENT_EMAILS", "").split(",") if r.strip()]
 
-    if not gmail_user or not gmail_app_password:
+    if not gmail_user or not gmail_app_password or not recipients:
         logging.error("Email configuration is incomplete. Skipping email send.")
         return
 

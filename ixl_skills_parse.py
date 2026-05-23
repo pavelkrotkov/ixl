@@ -42,7 +42,7 @@ def get_codes_from_ixl(url: str) -> pd.DataFrame | None:
                 skill_number = num_el.get_text().strip()
                 skill_name = name_el.get_text().strip()
                 skill_link = node.find("a", class_="skill-tree-skill-link")
-                permacode = skill_link["data-permacode"] if skill_link else None
+                permacode = skill_link.get("data-permacode") if skill_link else None
 
                 skills.append(
                     {
