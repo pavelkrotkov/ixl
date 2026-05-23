@@ -59,7 +59,7 @@ class BaseStatsScraper(ABC):
         pass
 
     @abstractmethod
-    def get_stats(self):
+    def get_stats(self, *args, **kwargs):
         pass
 
 
@@ -273,15 +273,8 @@ class IXLStatsScraper(BaseStatsScraper):
             self.driver.save_screenshot(f"ixl_progress_improvement_error_{student_name}.png")
             raise
 
-    def get_stats(self):
+    def get_stats(self, username, password):
         try:
-            username = os.environ.get("IXL_USERNAME")
-            password = os.environ.get("IXL_PASSWORD")
-            if not username:
-                raise ValueError("IXL_USERNAME not set in environment variables")
-            if not password:
-                raise ValueError("IXL_PASSWORD not set in environment variables")
-
             self.login(username, password)
             self.select_date_range("Today")
 
@@ -326,13 +319,6 @@ class MathAcademyStatsScraper(BaseStatsScraper):
             self.logger.error(f"Login failed for Math Academy: {e!s}")
             self.driver.save_screenshot("math_academy_login_error.png")
             raise
-
-    def get_student_ids(self):
-        student_ids = os.environ.get("MATHACADEMY_STUDENT_IDS", "")
-        if not student_ids:
-            self.logger.error("MATHACADEMY_STUDENT_IDS environment variable is not set")
-            return []
-        return student_ids.split(",")
 
     def process_student_data(self, student_id):
         try:
@@ -431,18 +417,10 @@ class MathAcademyStatsScraper(BaseStatsScraper):
         html += "</table>"
         return html
 
-    def get_stats(self):
+    def get_stats(self, username, password, student_ids):
         try:
-            username = os.environ.get("MATHACADEMY_USERNAME")
-            password = os.environ.get("MATHACADEMY_PASSWORD")
-            if not username:
-                raise ValueError("MATHACADEMY_USERNAME not set in environment variables")
-            if not password:
-                raise ValueError("MATHACADEMY_PASSWORD not set in environment variables")
-
             self.login(username, password)
 
-            student_ids = self.get_student_ids()
             for student_id in student_ids:
                 self.process_student_data(student_id)
 
@@ -458,26 +436,23 @@ def setup_driver():
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     if os.environ.get("GITHUB_ACTIONS"):
-        service = Service("chromedriver")
+        driver = webdriver.Chrome(options=chrome_options)
     else:
         from webdriver_manager.chrome import ChromeDriverManager
 
         service = Service(ChromeDriverManager().install())
-
-    driver = webdriver.Chrome(service=service, options=chrome_options)
+        driver = webdriver.Chrome(service=service, options=chrome_options)
     driver.set_window_size(1920, 1080)
     return driver
 
 
-def send_email(subject: str, html_content: str) -> None:
-    gmail_user = os.environ.get("GMAIL_USER")
-    gmail_app_password = os.environ.get("GMAIL_APP_PASSWORD")
-    recipients = [r.strip() for r in os.environ.get("RECIPIENT_EMAILS", "").split(",") if r.strip()]
-
-    if not gmail_user or not gmail_app_password or not recipients:
-        logging.error("Email configuration is incomplete. Skipping email send.")
-        return
-
+def send_email(
+    subject: str,
+    html_content: str,
+    gmail_user: str,
+    gmail_app_password: str,
+    recipients: list[str],
+) -> None:
     message = MIMEMultipart("alternative")
     message["Subject"] = subject
     message["From"] = gmail_user
@@ -493,8 +468,38 @@ def send_email(subject: str, html_content: str) -> None:
         logging.error(f"Failed to send email: {e!s}")
 
 
+def _require_env(name):
+    value = os.environ.get(name)
+    if not value:
+        raise ValueError(f"{name} not set in environment variables")
+    return value
+
+
+def _require_csv_env(name, empty_message):
+    values = [value.strip() for value in _require_env(name).split(",") if value.strip()]
+    if not values:
+        raise ValueError(empty_message)
+    return values
+
+
 def main():
     logger = logging.getLogger(__name__)
+
+    # Read all required credentials/config up front; fail fast if anything is missing.
+    ixl_username = _require_env("IXL_USERNAME")
+    ixl_password = _require_env("IXL_PASSWORD")
+    mathacademy_username = _require_env("MATHACADEMY_USERNAME")
+    mathacademy_password = _require_env("MATHACADEMY_PASSWORD")
+    mathacademy_student_ids = _require_csv_env(
+        "MATHACADEMY_STUDENT_IDS", "MATHACADEMY_STUDENT_IDS must contain at least one ID"
+    )
+    gmail_user = _require_env("GMAIL_USER")
+    gmail_app_password = _require_env("GMAIL_APP_PASSWORD")
+    recipients = _require_csv_env(
+        "RECIPIENT_EMAILS", "RECIPIENT_EMAILS must contain at least one address"
+    )
+
+    send_email_enabled = os.environ.get("SEND_EMAIL", "false").lower() == "true"
 
     driver = setup_driver()
     ixl_data = {}
@@ -504,7 +509,7 @@ def main():
         # IXL scraping
         try:
             ixl_scraper = IXLStatsScraper(driver)
-            ixl_scraper.get_stats()
+            ixl_scraper.get_stats(ixl_username, ixl_password)
             ixl_data = ixl_scraper.student_data
             logger.info("IXL scraping completed successfully")
         except Exception as e:
@@ -513,7 +518,11 @@ def main():
         # Math Academy scraping
         try:
             math_academy_scraper = MathAcademyStatsScraper(driver)
-            math_academy_scraper.get_stats()
+            math_academy_scraper.get_stats(
+                mathacademy_username,
+                mathacademy_password,
+                mathacademy_student_ids,
+            )
             math_academy_data = math_academy_scraper.student_data
             logger.info("Math Academy scraping completed successfully")
         except Exception as e:
@@ -546,8 +555,14 @@ def main():
 
             html_content += "</body></html>"
 
-            if os.environ.get("SEND_EMAIL", "false").lower() == "true":
-                send_email("IXL and Math Academy Progress Report", html_content)
+            if send_email_enabled:
+                send_email(
+                    "IXL and Math Academy Progress Report",
+                    html_content,
+                    gmail_user,
+                    gmail_app_password,
+                    recipients,
+                )
             else:
                 logger.info("skipping sending email")
         else:
