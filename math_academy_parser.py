@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 
 
-def parse_activity_html(activity_html):
+def parse_activity_html(activity_html: str) -> list[dict[str, str]]:
     if not activity_html:
         return []
     soup = BeautifulSoup(activity_html, "html.parser")
@@ -9,7 +9,7 @@ def parse_activity_html(activity_html):
     date_count = 0
 
     for tr in soup.find_all("tr"):
-        if tr.get("class", []) == []:
+        if not tr.get("class"):
             date_td = tr.find("td", class_="dateHeader")
             if date_td:
                 date_count += 1
@@ -52,7 +52,7 @@ def parse_activity_html(activity_html):
     return parsed_data
 
 
-def format_activity_html(parsed_data):
+def format_activity_html(parsed_data: list[dict[str, str]]) -> str:
     html = "<table border='1' style='border-collapse: collapse; width: 100%;'>"
     html += "<tr style='background-color: #f2f2f2;'><th>Type</th><th>Name</th><th>Completion</th><th>Points</th></tr>"
 
