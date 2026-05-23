@@ -35,18 +35,10 @@ def parse_activity_html(activity_html: str | None) -> list[dict[str, str]]:
             parsed_data.append(
                 {
                     "type": "task",
-                    "task_type": (
-                        task_type_td.get_text(strip=True) if task_type_td else ""
-                    ),
-                    "task_name": (
-                        task_name_div.get_text(strip=True) if task_name_div else ""
-                    ),
-                    "completion": (
-                        completion_td.get_text(strip=True) if completion_td else ""
-                    ),
-                    "points": (
-                        points_span.get_text(strip=True) if points_span else ""
-                    ),
+                    "task_type": (task_type_td.get_text(strip=True) if task_type_td else ""),
+                    "task_name": (task_name_div.get_text(strip=True) if task_name_div else ""),
+                    "completion": (completion_td.get_text(strip=True) if completion_td else ""),
+                    "points": (points_span.get_text(strip=True) if points_span else ""),
                 }
             )
 
