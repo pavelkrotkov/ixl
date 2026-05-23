@@ -484,10 +484,16 @@ def main():
     ixl_password = _require_env("IXL_PASSWORD")
     mathacademy_username = _require_env("MATHACADEMY_USERNAME")
     mathacademy_password = _require_env("MATHACADEMY_PASSWORD")
-    mathacademy_student_ids = _require_env("MATHACADEMY_STUDENT_IDS").split(",")
+    mathacademy_student_ids = [
+        s.strip() for s in _require_env("MATHACADEMY_STUDENT_IDS").split(",") if s.strip()
+    ]
+    if not mathacademy_student_ids:
+        raise ValueError("MATHACADEMY_STUDENT_IDS must contain at least one ID")
     gmail_user = _require_env("GMAIL_USER")
     gmail_app_password = _require_env("GMAIL_APP_PASSWORD")
     recipients = [r.strip() for r in _require_env("RECIPIENT_EMAILS").split(",") if r.strip()]
+    if not recipients:
+        raise ValueError("RECIPIENT_EMAILS must contain at least one address")
 
     send_email_enabled = os.environ.get("SEND_EMAIL", "false").lower() == "true"
 
