@@ -98,6 +98,10 @@ def test_parse_activity_html_empty_input():
     assert parse_activity_html("") == []
 
 
+def test_parse_activity_html_none_input():
+    assert parse_activity_html(None) == []
+
+
 def test_format_activity_html_renders_date_and_task_rows():
     parsed_data = [
         {"type": "date", "date": "Monday, May 5", "xp": "85 XP"},

@@ -2,6 +2,8 @@ from bs4 import BeautifulSoup
 
 
 def parse_activity_html(activity_html):
+    if not activity_html:
+        return []
     soup = BeautifulSoup(activity_html, "html.parser")
     parsed_data = []
     date_count = 0
@@ -21,7 +23,7 @@ def parse_activity_html(activity_html):
                     xp_span.extract()
                 date = date_td.get_text(strip=True)
                 parsed_data.append({"type": "date", "date": date, "xp": xp})
-        elif date_count < 3:  # Only parse task rows before the third date row
+        else:  # Only parse task rows before the third date row (we break above)
             task_type_td = tr.find("td", class_="taskTypeColumn")
             task_name_div = tr.find("div", class_="taskName")
             completion_td = tr.find("td", class_="taskCompletedColumn")
