@@ -393,6 +393,7 @@ dependencies = [
     { name = "pandas" },
     { name = "requests" },
     { name = "selenium" },
+    { name = "webdriver-manager" },
 ]
 
 [package.dev-dependencies]
@@ -403,7 +404,6 @@ dev = [
     { name = "pytest-cov" },
     { name = "ruff" },
     { name = "ty" },
-    { name = "webdriver-manager" },
 ]
 
 [package.metadata]
@@ -412,6 +412,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=3.0.3" },
     { name = "requests", specifier = ">=2.34.2" },
     { name = "selenium", specifier = ">=4.44.0" },
+    { name = "webdriver-manager", specifier = ">=4.1.1" },
 ]
 
 [package.metadata.requires-dev]
@@ -422,7 +423,6 @@ dev = [
     { name = "pytest-cov", specifier = ">=7.1.0" },
     { name = "ruff", specifier = ">=0.15.14" },
     { name = "ty", specifier = ">=0.0.39" },
-    { name = "webdriver-manager", specifier = ">=4.1.1" },
 ]
 
 [[package]]
