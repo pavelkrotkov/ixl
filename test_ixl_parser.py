@@ -2,7 +2,6 @@ from bs4 import BeautifulSoup
 
 from ixl_parser import process_table_html
 
-
 FIXTURE_HTML = """
 <div class="student-improvement-table">
     <div class="subject-grade-row">
@@ -66,7 +65,9 @@ def test_process_table_html_renders_subject_grade_row():
         td for td in soup.find_all("td") if "Math - 5th grade" in td.get_text()
     )
     assert subject_td.get("colspan") == "5"
-    assert "font-weight: bold" in subject_td.get("style", "")
+    subject_style = subject_td.get("style", "")
+    assert isinstance(subject_style, str)
+    assert "font-weight: bold" in subject_style
 
 
 def test_process_table_html_renders_category_row():
@@ -79,7 +80,9 @@ def test_process_table_html_renders_category_row():
         if "Multiplication and division" in td.get_text()
     )
     assert category_td.get("colspan") == "5"
-    assert "font-style: italic" in category_td.get("style", "")
+    category_style = category_td.get("style", "")
+    assert isinstance(category_style, str)
+    assert "font-style: italic" in category_style
 
 
 def test_process_table_html_renders_skill_row_with_score_improvement():
