@@ -61,9 +61,7 @@ def test_process_table_html_renders_subject_grade_row():
     assert "Math - 5th grade" in result
     # Subject-grade rows span all 5 columns with bold styling
     soup = BeautifulSoup(result, "html.parser")
-    subject_td = next(
-        td for td in soup.find_all("td") if "Math - 5th grade" in td.get_text()
-    )
+    subject_td = next(td for td in soup.find_all("td") if "Math - 5th grade" in td.get_text())
     assert subject_td.get("colspan") == "5"
     subject_style = subject_td.get("style", "")
     assert isinstance(subject_style, str)
@@ -75,9 +73,7 @@ def test_process_table_html_renders_category_row():
     assert "Multiplication and division" in result
     soup = BeautifulSoup(result, "html.parser")
     category_td = next(
-        td
-        for td in soup.find_all("td")
-        if "Multiplication and division" in td.get_text()
+        td for td in soup.find_all("td") if "Multiplication and division" in td.get_text()
     )
     assert category_td.get("colspan") == "5"
     category_style = category_td.get("style", "")
@@ -90,9 +86,7 @@ def test_process_table_html_renders_skill_row_with_score_improvement():
     soup = BeautifulSoup(result, "html.parser")
     rows = soup.find_all("tr")
     # Locate the skill row with the multiply skill name
-    multiply_row = next(
-        tr for tr in rows if "Multiply by 1-digit numbers" in tr.get_text()
-    )
+    multiply_row = next(tr for tr in rows if "Multiply by 1-digit numbers" in tr.get_text())
     cells = [td.get_text() for td in multiply_row.find_all("td")]
     assert cells == [
         "Multiply by 1-digit numbers",
@@ -107,9 +101,7 @@ def test_process_table_html_handles_missing_score_improvement():
     result = process_table_html(FIXTURE_HTML)
     soup = BeautifulSoup(result, "html.parser")
     rows = soup.find_all("tr")
-    divide_row = next(
-        tr for tr in rows if "Divide by 1-digit numbers" in tr.get_text()
-    )
+    divide_row = next(tr for tr in rows if "Divide by 1-digit numbers" in tr.get_text())
     cells = [td.get_text() for td in divide_row.find_all("td")]
     # No scores -> last cell should be "N/A"
     assert cells[-1] == "N/A"
