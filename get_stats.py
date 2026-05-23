@@ -1,19 +1,20 @@
 import logging
 import os
-import time
 import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import time
 from abc import ABC, abstractmethod
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
+from bs4 import BeautifulSoup
 from selenium import webdriver
+from selenium.common.exceptions import StaleElementReferenceException, TimeoutException
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.action_chains import ActionChains
-from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
-from bs4 import BeautifulSoup
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 # Set up logging once at the module level
 logging.basicConfig(
@@ -35,9 +36,7 @@ class BaseStatsScraper(ABC):
             )
         except TimeoutException:
             self.logger.error(f"Element not found: {by}={value}")
-            self.driver.save_screenshot(
-                f"element_not_found_{value.replace(' ', '_')}.png"
-            )
+            self.driver.save_screenshot(f"element_not_found_{value.replace(' ', '_')}.png")
             raise
 
     def click_element(self, by, value, timeout=10):
@@ -77,9 +76,7 @@ class IXLStatsScraper(BaseStatsScraper):
             self.click_element(By.ID, "qlsubmit")
             self.logger.info("Successfully logged in to IXL")
 
-            self.find_element(
-                By.CSS_SELECTOR, "label[data-cy^='subaccount-selection-']"
-            )
+            self.find_element(By.CSS_SELECTOR, "label[data-cy^='subaccount-selection-']")
             parent_subaccount = self.find_element(
                 By.XPATH,
                 "//label[contains(@data-cy, 'subaccount-selection-') and .//span[text()='Parent']]",
@@ -88,20 +85,16 @@ class IXLStatsScraper(BaseStatsScraper):
             self.logger.info("Selected 'Parent' subaccount")
 
         except Exception as e:
-            self.logger.error(f"Login or subaccount selection failed: {str(e)}")
+            self.logger.error(f"Login or subaccount selection failed: {e!s}")
             self.driver.save_screenshot("ixl_login_error.png")
             raise
 
     def select_date_range(self, option="Today"):
         try:
             self.find_element(By.CSS_SELECTOR, ".date-range")
-            self.click_element(
-                By.CSS_SELECTOR, ".date-range .option-select.global .select-open"
-            )
+            self.click_element(By.CSS_SELECTOR, ".date-range .option-select.global .select-open")
             self.find_element(By.CSS_SELECTOR, ".date-range .select-body")
-            self.click_element(
-                By.XPATH, f"//div[@class='option' and contains(text(), '{option}')]"
-            )
+            self.click_element(By.XPATH, f"//div[@class='option' and contains(text(), '{option}')]")
             self.wait.until(
                 EC.text_to_be_present_in_element(
                     (By.CSS_SELECTOR, ".date-range .option-selection"), option
@@ -109,14 +102,12 @@ class IXLStatsScraper(BaseStatsScraper):
             )
             self.logger.info(f"Selected date range: {option}")
         except Exception as e:
-            self.logger.error(f"Failed to select date range: {str(e)}")
+            self.logger.error(f"Failed to select date range: {e!s}")
             self.driver.save_screenshot("ixl_date_range_error.png")
             raise
 
     def get_student_options(self):
-        self.click_element(
-            By.CSS_SELECTOR, ".student-select .option-select.global .select-open"
-        )
+        self.click_element(By.CSS_SELECTOR, ".student-select .option-select.global .select-open")
         self.find_element(By.CSS_SELECTOR, ".student-select .select-body")
         return self.driver.find_elements(
             By.CSS_SELECTOR,
@@ -171,9 +162,7 @@ class IXLStatsScraper(BaseStatsScraper):
         for h in headers:
             th = soup.new_tag("th")
             th.string = h
-            th[
-                "style"
-            ] = "border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2;"
+            th["style"] = "border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2;"
             header.append(th)
         new_table.append(header)
 
@@ -185,17 +174,17 @@ class IXLStatsScraper(BaseStatsScraper):
                 td = soup.new_tag("td")
                 td.string = row.text.strip()
                 td["colspan"] = "5"
-                td[
-                    "style"
-                ] = "border: 1px solid #ddd; padding: 8px; font-weight: bold; background-color: #e6e6e6;"
+                td["style"] = (
+                    "border: 1px solid #ddd; padding: 8px; font-weight: bold; background-color: #e6e6e6;"
+                )
                 new_row.append(td)
             elif "category-row" in row.get("class", []):
                 td = soup.new_tag("td")
                 td.string = row.text.strip()
                 td["colspan"] = "5"
-                td[
-                    "style"
-                ] = "border: 1px solid #ddd; padding: 8px; font-style: italic; background-color: #f9f9f9;"
+                td["style"] = (
+                    "border: 1px solid #ddd; padding: 8px; font-style: italic; background-color: #f9f9f9;"
+                )
                 new_row.append(td)
             elif "skill-row" in row.get("class", []):
                 cells = [
@@ -210,11 +199,7 @@ class IXLStatsScraper(BaseStatsScraper):
                     td = soup.new_tag("td")
                     td["style"] = "border: 1px solid #ddd; padding: 8px;"
                     if i == 4 and cell:  # Score Improvement
-                        td.string = (
-                            f"{cell[0].text} to {cell[1].text}"
-                            if len(cell) == 2
-                            else "N/A"
-                        )
+                        td.string = f"{cell[0].text} to {cell[1].text}" if len(cell) == 2 else "N/A"
                     elif cell:
                         td.string = cell.text.strip()
                     else:
@@ -228,9 +213,7 @@ class IXLStatsScraper(BaseStatsScraper):
     def process_student_data(self, student_name):
         try:
             time.sleep(3)
-            stats_element = self.find_element(
-                By.CSS_SELECTOR, ".summary-stat-container"
-            )
+            stats_element = self.find_element(By.CSS_SELECTOR, ".summary-stat-container")
             stats_text = " ".join(stats_element.text.split())
             self.logger.info(f"IXL Stats for {student_name}: {stats_text.lower()}")
             self.student_data[student_name] = {"stats": stats_text.lower()}
@@ -245,14 +228,12 @@ class IXLStatsScraper(BaseStatsScraper):
                 self.logger.info(f"No progress to report for {student_name}")
 
         except Exception as e:
-            self.logger.error(f"Error processing IXL data for {student_name}: {str(e)}")
+            self.logger.error(f"Error processing IXL data for {student_name}: {e!s}")
 
     def get_progress_and_improvement_data(self, student_name):
         try:
             self.driver.get("https://www.ixl.com/analytics/progress-and-improvement")
-            self.logger.info(
-                f"Navigated to Progress and Improvement page for {student_name}"
-            )
+            self.logger.info(f"Navigated to Progress and Improvement page for {student_name}")
             time.sleep(3)
 
             table = self.find_element(By.CSS_SELECTOR, ".student-improvement-table")
@@ -268,10 +249,7 @@ class IXLStatsScraper(BaseStatsScraper):
                 time_spent = row.find_element(By.CSS_SELECTOR, ".skill-time").text
                 questions = row.find_element(By.CSS_SELECTOR, ".skill-questions").text
                 scores = [
-                    x.text
-                    for x in row.find_elements(
-                        By.CSS_SELECTOR, ".skill-improvement .score"
-                    )
+                    x.text for x in row.find_elements(By.CSS_SELECTOR, ".skill-improvement .score")
                 ]
                 score_from = scores[0] if scores else "N/A"
                 score_to = scores[1] if len(scores) > 1 else "N/A"
@@ -280,17 +258,13 @@ class IXLStatsScraper(BaseStatsScraper):
                 self.logger.info(log_message)
 
             self.driver.get(self.login_url)
-            self.logger.info(
-                f"Navigated back to main analytics page for {student_name}"
-            )
+            self.logger.info(f"Navigated back to main analytics page for {student_name}")
 
         except Exception as e:
             self.logger.error(
-                f"Error extracting IXL progress and improvement data for {student_name}: {str(e)}"
+                f"Error extracting IXL progress and improvement data for {student_name}: {e!s}"
             )
-            self.driver.save_screenshot(
-                f"ixl_progress_improvement_error_{student_name}.png"
-            )
+            self.driver.save_screenshot(f"ixl_progress_improvement_error_{student_name}.png")
             raise
 
     def get_stats(self):
@@ -306,9 +280,7 @@ class IXLStatsScraper(BaseStatsScraper):
             self.select_date_range("Today")
 
             student_options = self.get_student_options()
-            student_names = [
-                student.get_attribute("data-name") for student in student_options
-            ]
+            student_names = [student.get_attribute("data-name") for student in student_options]
 
             for student_name in student_names:
                 self.logger.info(f"Processing IXL student: {student_name}")
@@ -318,9 +290,7 @@ class IXLStatsScraper(BaseStatsScraper):
                     self.logger.warning(f"Failed to select IXL student: {student_name}")
 
         except Exception as e:
-            self.logger.error(
-                f"An error occurred during IXL stats collection: {str(e)}"
-            )
+            self.logger.error(f"An error occurred during IXL stats collection: {e!s}")
 
 
 class MathAcademyStatsScraper(BaseStatsScraper):
@@ -347,7 +317,7 @@ class MathAcademyStatsScraper(BaseStatsScraper):
 
             self.logger.info("Successfully logged in to Math Academy")
         except Exception as e:
-            self.logger.error(f"Login failed for Math Academy: {str(e)}")
+            self.logger.error(f"Login failed for Math Academy: {e!s}")
             self.driver.save_screenshot("math_academy_login_error.png")
             raise
 
@@ -395,7 +365,7 @@ class MathAcademyStatsScraper(BaseStatsScraper):
             )
         except Exception as e:
             self.logger.error(
-                f"Error processing Math Academy data for student ID {student_id}: {str(e)}"
+                f"Error processing Math Academy data for student ID {student_id}: {e!s}"
             )
             self.driver.save_screenshot(f"math_academy_student_{student_id}_error.png")
 
@@ -431,18 +401,10 @@ class MathAcademyStatsScraper(BaseStatsScraper):
                 parsed_data.append(
                     {
                         "type": "task",
-                        "task_type": (
-                            task_type_td.get_text(strip=True) if task_type_td else ""
-                        ),
-                        "task_name": (
-                            task_name_div.get_text(strip=True) if task_name_div else ""
-                        ),
-                        "completion": (
-                            completion_td.get_text(strip=True) if completion_td else ""
-                        ),
-                        "points": (
-                            points_span.get_text(strip=True) if points_span else ""
-                        ),
+                        "task_type": (task_type_td.get_text(strip=True) if task_type_td else ""),
+                        "task_name": (task_name_div.get_text(strip=True) if task_name_div else ""),
+                        "completion": (completion_td.get_text(strip=True) if completion_td else ""),
+                        "points": (points_span.get_text(strip=True) if points_span else ""),
                     }
                 )
 
@@ -468,13 +430,9 @@ class MathAcademyStatsScraper(BaseStatsScraper):
             username = os.environ.get("MATHACADEMY_USERNAME")
             password = os.environ.get("MATHACADEMY_PASSWORD")
             if not username:
-                raise ValueError(
-                    "MATHACADEMY_USERNAME not set in environment variables"
-                )
+                raise ValueError("MATHACADEMY_USERNAME not set in environment variables")
             if not password:
-                raise ValueError(
-                    "MATHACADEMY_PASSWORD not set in environment variables"
-                )
+                raise ValueError("MATHACADEMY_PASSWORD not set in environment variables")
 
             self.login(username, password)
 
@@ -483,9 +441,7 @@ class MathAcademyStatsScraper(BaseStatsScraper):
                 self.process_student_data(student_id)
 
         except Exception as e:
-            self.logger.error(
-                f"An error occurred during Math Academy stats collection: {str(e)}"
-            )
+            self.logger.error(f"An error occurred during Math Academy stats collection: {e!s}")
 
 
 def setup_driver():
@@ -528,7 +484,7 @@ def send_email(subject, html_content):
             server.sendmail(gmail_user, recipients, message.as_string())
         logging.info(f"Email sent successfully to {', '.join(recipients)}")
     except Exception as e:
-        logging.error(f"Failed to send email: {str(e)}")
+        logging.error(f"Failed to send email: {e!s}")
 
 
 def main():
@@ -546,7 +502,7 @@ def main():
             ixl_data = ixl_scraper.student_data
             logger.info("IXL scraping completed successfully")
         except Exception as e:
-            logger.error(f"Error during IXL scraping: {str(e)}")
+            logger.error(f"Error during IXL scraping: {e!s}")
 
         # Math Academy scraping
         try:
@@ -555,7 +511,7 @@ def main():
             math_academy_data = math_academy_scraper.student_data
             logger.info("Math Academy scraping completed successfully")
         except Exception as e:
-            logger.error(f"Error during Math Academy scraping: {str(e)}")
+            logger.error(f"Error during Math Academy scraping: {e!s}")
 
         # Prepare and send email
         if ixl_data or math_academy_data:
@@ -566,9 +522,7 @@ def main():
                 for student_name, data in ixl_data.items():
                     html_content += f"<h3>{student_name} {data['stats']}</h3>"
                     if "progress_table" in data:
-                        html_content += IXLStatsScraper.process_table_html(
-                            data["progress_table"]
-                        )
+                        html_content += IXLStatsScraper.process_table_html(data["progress_table"])
 
             if math_academy_data:
                 # Math Academy Report
@@ -591,12 +545,10 @@ def main():
             else:
                 logger.info("skipping sending email")
         else:
-            logger.warning(
-                "No data collected from either IXL or Math Academy. No email sent."
-            )
+            logger.warning("No data collected from either IXL or Math Academy. No email sent.")
 
     except Exception as e:
-        logger.error(f"An unexpected error occurred: {str(e)}")
+        logger.error(f"An unexpected error occurred: {e!s}")
     finally:
         driver.quit()
         logger.info("Script execution completed.")

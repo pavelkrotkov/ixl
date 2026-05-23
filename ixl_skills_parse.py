@@ -1,10 +1,9 @@
-from typing import Union
-import requests
 import pandas as pd
+import requests
 from bs4 import BeautifulSoup
 
 
-def get_codes_from_ixl(url: str) -> Union[pd.DataFrame, None]:
+def get_codes_from_ixl(url: str) -> pd.DataFrame | None:
     """
     Fetches Earth Science skills data from the IXL website and returns it in a DataFrame.
     If any errors occur during the request or parsing, prints an error message and returns None.
@@ -29,18 +28,12 @@ def get_codes_from_ixl(url: str) -> Union[pd.DataFrame, None]:
         skill_categories = soup.find_all("div", class_="skill-tree-category")
 
         for category in skill_categories:
-            grade = category.find(
-                "span", class_="skill-tree-skills-header"
-            ).text.strip()
+            grade = category.find("span", class_="skill-tree-skills-header").text.strip()
             skill_nodes = category.find_all("li", class_="skill-tree-skill-node")
 
             for node in skill_nodes:
-                skill_number = node.find(
-                    "span", class_="skill-tree-skill-number"
-                ).text.strip()
-                skill_name = node.find(
-                    "span", class_="skill-tree-skill-name"
-                ).text.strip()
+                skill_number = node.find("span", class_="skill-tree-skill-number").text.strip()
+                skill_name = node.find("span", class_="skill-tree-skill-name").text.strip()
                 skill_link = node.find("a", class_="skill-tree-skill-link")
                 permacode = skill_link["data-permacode"] if skill_link else None
 
@@ -63,7 +56,7 @@ def get_codes_from_ixl(url: str) -> Union[pd.DataFrame, None]:
         return None
 
 
-def earch_science_skills_data() -> Union[pd.DataFrame, None]:
+def earch_science_skills_data() -> pd.DataFrame | None:
     # Define the URL of the Earth Science section on the IXL website
     url = "https://www.ixl.com/science/earth-science"
 
@@ -74,7 +67,6 @@ def earch_science_skills_data() -> Union[pd.DataFrame, None]:
     grade_map = {
         "Kindergarten skills": 0,
         "First-grade skills": 1,
-        "Second-grade skills": 2,
         "Second-grade skills": 2,
         "Third-grade skills": 3,
         "Fourth-grade skills": 4,
@@ -103,7 +95,7 @@ def earch_science_skills_data() -> Union[pd.DataFrame, None]:
     return pivot_df.fillna("")
 
 
-def algebra2_skills_data() -> Union[pd.DataFrame, None]:
+def algebra2_skills_data() -> pd.DataFrame | None:
     url = "https://www.ixl.com/math/algebra-2"
     df = get_codes_from_ixl(url)
 
