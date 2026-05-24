@@ -107,9 +107,48 @@ def test_process_table_html_handles_missing_score_improvement():
     assert cells[-1] == "N/A"
 
 
-def test_process_table_html_empty_input_returns_table_with_header_only():
+def test_process_table_html_empty_input_returns_empty_string():
+    assert process_table_html("") == ""
+    assert process_table_html(None) == ""
+
+
+def test_process_table_html_markup_without_rows_returns_table_with_header_only():
     result = process_table_html("<div></div>")
     soup = BeautifulSoup(result, "html.parser")
     rows = soup.find_all("tr")
     assert len(rows) == 1
     assert rows[0].find_all("th")
+
+
+def test_process_table_html_ignores_non_report_row_classes():
+    result = process_table_html(
+        """
+        <div class="student-improvement-table">
+            <div class="row-container">Container</div>
+            <div class="narrow">Not a row</div>
+        </div>
+        """
+    )
+    soup = BeautifulSoup(result, "html.parser")
+    rows = soup.find_all("tr")
+    assert len(rows) == 1
+    assert rows[0].find_all("th")
+
+
+def test_process_table_html_strips_score_improvement_whitespace():
+    result = process_table_html(
+        """
+        <div class="skill-row">
+            <div class="skill-name-and-permacode"><span>Skill</span></div>
+            <div class="permacode">ABC</div>
+            <div class="skill-time">5 min</div>
+            <div class="skill-questions">10</div>
+            <div class="skill-improvement">
+                <span class="score"> 50 </span>
+                <span class="score"> 80 </span>
+            </div>
+        </div>
+        """
+    )
+    assert "50 to 80" in result
+    assert " 50 " not in result
