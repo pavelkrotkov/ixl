@@ -152,3 +152,24 @@ def test_process_table_html_strips_score_improvement_whitespace():
     )
     assert "50 to 80" in result
     assert " 50 " not in result
+
+
+def test_process_table_html_uses_first_two_scores_when_extra_scores_exist():
+    result = process_table_html(
+        """
+        <div class="skill-row">
+            <div class="skill-name-and-permacode"><span>Skill</span></div>
+            <div class="permacode">ABC</div>
+            <div class="skill-time">5 min</div>
+            <div class="skill-questions">10</div>
+            <div class="skill-improvement">
+                <span class="score">10</span>
+                <span class="score">20</span>
+                <span class="score">30</span>
+            </div>
+        </div>
+        """
+    )
+
+    assert "10 to 20" in result
+    assert "30" not in result

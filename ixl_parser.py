@@ -1,5 +1,10 @@
 from bs4 import BeautifulSoup
 
+BASE_CELL_STYLE = "border: 1px solid #ddd; padding: 8px;"
+HEADER_CELL_STYLE = f"{BASE_CELL_STYLE} background-color: #f2f2f2;"
+SUBJECT_CELL_STYLE = f"{BASE_CELL_STYLE} font-weight: bold; background-color: #e6e6e6;"
+CATEGORY_CELL_STYLE = f"{BASE_CELL_STYLE} font-style: italic; background-color: #f9f9f9;"
+
 
 def process_table_html(table_html: str | None) -> str:
     if not table_html:
@@ -20,10 +25,11 @@ def process_table_html(table_html: str | None) -> str:
         "#",
         "Score Improvement",
     ]
+    num_cols = str(len(headers))
     for h in headers:
         th = soup.new_tag("th")
         th.string = h
-        th["style"] = "border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2;"
+        th["style"] = HEADER_CELL_STYLE
         header.append(th)
     new_table.append(header)
 
@@ -38,18 +44,14 @@ def process_table_html(table_html: str | None) -> str:
         if "subject-grade-row" in row_classes:
             td = soup.new_tag("td")
             td.string = row.get_text().strip()
-            td["colspan"] = "5"
-            td["style"] = (
-                "border: 1px solid #ddd; padding: 8px; font-weight: bold; background-color: #e6e6e6;"
-            )
+            td["colspan"] = num_cols
+            td["style"] = SUBJECT_CELL_STYLE
             new_row.append(td)
         elif "category-row" in row_classes:
             td = soup.new_tag("td")
             td.string = row.get_text().strip()
-            td["colspan"] = "5"
-            td["style"] = (
-                "border: 1px solid #ddd; padding: 8px; font-style: italic; background-color: #f9f9f9;"
-            )
+            td["colspan"] = num_cols
+            td["style"] = CATEGORY_CELL_STYLE
             new_row.append(td)
         elif "skill-row" in row_classes:
             score_cells = row.select(".skill-improvement .score")
@@ -62,15 +64,15 @@ def process_table_html(table_html: str | None) -> str:
 
             for cell in plain_cells:
                 td = soup.new_tag("td")
-                td["style"] = "border: 1px solid #ddd; padding: 8px;"
+                td["style"] = BASE_CELL_STYLE
                 td.string = cell.get_text().strip() if cell else "N/A"
                 new_row.append(td)
 
             score_td = soup.new_tag("td")
-            score_td["style"] = "border: 1px solid #ddd; padding: 8px;"
+            score_td["style"] = BASE_CELL_STYLE
             score_td.string = (
                 f"{score_cells[0].get_text().strip()} to {score_cells[1].get_text().strip()}"
-                if len(score_cells) == 2
+                if len(score_cells) >= 2
                 else "N/A"
             )
             new_row.append(score_td)
