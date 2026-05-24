@@ -1,5 +1,18 @@
 from bs4 import BeautifulSoup
 
+HEADERS = [
+    "Subject/Category/Skill",
+    "Code",
+    "Time Spent",
+    "#",
+    "Score Improvement",
+]
+SKILL_CELL_SELECTORS = [
+    ".skill-name-and-permacode span",
+    ".permacode",
+    ".skill-time",
+    ".skill-questions",
+]
 BASE_CELL_STYLE = "border: 1px solid #ddd; padding: 8px;"
 HEADER_CELL_STYLE = f"{BASE_CELL_STYLE} background-color: #f2f2f2;"
 SUBJECT_CELL_STYLE = f"{BASE_CELL_STYLE} font-weight: bold; background-color: #e6e6e6;"
@@ -7,6 +20,7 @@ CATEGORY_CELL_STYLE = f"{BASE_CELL_STYLE} font-style: italic; background-color: 
 
 
 def process_table_html(table_html: str | None) -> str:
+    """Convert raw IXL progress table markup into the compact HTML email table."""
     if not table_html:
         return ""
 
@@ -18,15 +32,8 @@ def process_table_html(table_html: str | None) -> str:
 
     # Add header row
     header = soup.new_tag("tr")
-    headers = [
-        "Subject/Category/Skill",
-        "Code",
-        "Time Spent",
-        "#",
-        "Score Improvement",
-    ]
-    num_cols = str(len(headers))
-    for h in headers:
+    num_cols = str(len(HEADERS))
+    for h in HEADERS:
         th = soup.new_tag("th")
         th.string = h
         th["style"] = HEADER_CELL_STYLE
@@ -55,12 +62,7 @@ def process_table_html(table_html: str | None) -> str:
             new_row.append(td)
         elif "skill-row" in row_classes:
             score_cells = row.select(".skill-improvement .score")
-            plain_cells = [
-                row.select_one(".skill-name-and-permacode span"),
-                row.select_one(".permacode"),
-                row.select_one(".skill-time"),
-                row.select_one(".skill-questions"),
-            ]
+            plain_cells = [row.select_one(selector) for selector in SKILL_CELL_SELECTORS]
 
             for cell in plain_cells:
                 td = soup.new_tag("td")
