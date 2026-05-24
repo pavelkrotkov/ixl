@@ -93,6 +93,33 @@ def test_parse_activity_html_stops_after_second_date_header():
     assert "Should not appear" not in task_names
 
 
+def test_parse_activity_html_ignores_non_task_class_rows():
+    parsed = parse_activity_html(
+        """
+        <table>
+          <tr>
+            <td class="dateHeader">Monday<span class="dateTotalXP">10 XP</span></td>
+          </tr>
+          <tr class="summaryRow">
+            <td class="taskTypeColumn">Should not parse</td>
+            <td><div class="taskName">Summary row</div></td>
+            <td class="taskCompletedColumn">Complete</td>
+            <td><span class="taskPoints">99 XP</span></td>
+          </tr>
+          <tr class="taskRow">
+            <td class="taskTypeColumn">Lesson</td>
+            <td><div class="taskName">Valid task</div></td>
+            <td class="taskCompletedColumn">Complete</td>
+            <td><span class="taskPoints">10 XP</span></td>
+          </tr>
+        </table>
+        """
+    )
+
+    task_names = [item.get("task_name") for item in parsed if item["type"] == "task"]
+    assert task_names == ["Valid task"]
+
+
 def test_parse_activity_html_empty_input():
     assert parse_activity_html("") == []
 
@@ -156,6 +183,18 @@ def test_format_activity_html_escapes_dynamic_content():
     assert "40 &lt; 50" in html
     assert "<script>" not in html
     assert "<img" not in html
+
+
+def test_format_activity_html_ignores_unknown_item_types():
+    html = format_activity_html(
+        [
+            {"type": "unknown", "task_name": "Should not render"},
+            {"type": "date", "date": "Monday", "xp": "10 XP"},
+        ]
+    )
+
+    assert "Should not render" not in html
+    assert "Monday - 10 XP" in html
 
 
 def test_format_activity_html_empty_input_returns_table_shell():

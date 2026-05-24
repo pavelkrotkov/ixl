@@ -11,7 +11,8 @@ def parse_activity_html(activity_html: str | None) -> list[dict[str, str]]:
     date_count = 0
 
     for tr in soup.find_all("tr"):
-        if not tr.get("class"):
+        row_classes = tr.get("class")
+        if not row_classes:
             date_td = tr.find("td", class_="dateHeader")
             if date_td:
                 date_count += 1
@@ -25,7 +26,7 @@ def parse_activity_html(activity_html: str | None) -> list[dict[str, str]]:
                     xp_span.extract()
                 date = date_td.get_text(strip=True)
                 parsed_data.append({"type": "date", "date": date, "xp": xp})
-        else:  # Only parse task rows before the third date row (we break above)
+        elif isinstance(row_classes, list) and "taskRow" in row_classes:
             task_type_td = tr.find("td", class_="taskTypeColumn")
             task_name_div = tr.find("div", class_="taskName")
             completion_td = tr.find("td", class_="taskCompletedColumn")
@@ -57,7 +58,7 @@ def format_activity_html(parsed_data: list[dict[str, str]]) -> str:
             rows.append(
                 f"<tr style='background-color: #e6e6e6;'><td colspan='4'><strong>{escape(item['date'])} - {escape(item['xp'])}</strong></td></tr>"
             )
-        else:
+        elif item["type"] == "task":
             rows.append(
                 f"<tr><td>{escape(item['task_type'])}</td><td>{escape(item['task_name'])}</td><td>{escape(item['completion'])}</td><td>{escape(item['points'])}</td></tr>"
             )
