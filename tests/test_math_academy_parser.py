@@ -132,6 +132,32 @@ def test_format_activity_html_renders_date_and_task_rows():
     assert "<td>40 XP</td>" in html
 
 
+def test_format_activity_html_escapes_dynamic_content():
+    html = format_activity_html(
+        [
+            {
+                "type": "date",
+                "date": "Monday <script>",
+                "xp": "85 & 90 XP",
+            },
+            {
+                "type": "task",
+                "task_type": "Lesson",
+                "task_name": "Angles <img src=x onerror=alert(1)>",
+                "completion": "Done & checked",
+                "points": "40 < 50",
+            },
+        ]
+    )
+
+    assert "Monday &lt;script&gt; - 85 &amp; 90 XP" in html
+    assert "Angles &lt;img src=x onerror=alert(1)&gt;" in html
+    assert "Done &amp; checked" in html
+    assert "40 &lt; 50" in html
+    assert "<script>" not in html
+    assert "<img" not in html
+
+
 def test_format_activity_html_empty_input_returns_table_shell():
     html = format_activity_html([])
     assert html.startswith("<table")
