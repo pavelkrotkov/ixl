@@ -34,9 +34,7 @@ class IXLSession(BaseStatsScraper):
 
     def select_date_range(self, option="Today"):
         try:
-            self.find_element(By.CSS_SELECTOR, ".date-range")
             self.click_element(By.CSS_SELECTOR, ".date-range .option-select.global .select-open")
-            self.find_element(By.CSS_SELECTOR, ".date-range .select-body")
             self.click_element(By.XPATH, f"//div[@class='option' and contains(text(), '{option}')]")
             self.wait.until(
                 EC.text_to_be_present_in_element(
