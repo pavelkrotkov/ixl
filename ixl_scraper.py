@@ -54,7 +54,7 @@ class IXLStatsScraper(IXLSession):
         data = []
         try:
             self.login(username, password)
-            self.select_date_range("Today")
+            self.select_date_range()
             student_names = [
                 name
                 for student in self.get_student_options()
