@@ -39,12 +39,7 @@ def process_table_html(table_html: str) -> str:
     header = soup.new_tag("tr")
     for text in ("Subject/Category/Skill", "Code", "Time Spent", "#", "Score Improvement"):
         header.append(
-            _cell(
-                soup,
-                "th",
-                text,
-                f"{CELL_STYLE} background-color: #f2f2f2;",
-            )
+            _cell(soup, "th", text, f"{CELL_STYLE} background-color: #f2f2f2;")
         )
     table.append(header)
 
