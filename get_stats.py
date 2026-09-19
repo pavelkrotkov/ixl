@@ -3,7 +3,7 @@ from ixl_scraper import IXLStatsScraper
 from math_academy_scraper import MathAcademyStatsScraper
 from progress import IXLStudentProgress, MathAcademyStudentProgress
 from report import build_report
-from runtime import require_csv_env, require_env, send_email, setup_driver
+from runtime import env_enabled, require_csv_env, require_env, send_email, setup_driver
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -25,7 +25,7 @@ def main():
     recipients = require_csv_env(
         "RECIPIENT_EMAILS", "RECIPIENT_EMAILS must contain at least one address"
     )
-    send_email_enabled = require_env("SEND_EMAIL").lower() == "true"
+    send_email_enabled = env_enabled("SEND_EMAIL")
 
     driver = setup_driver()
     ixl_data: list[IXLStudentProgress] = []
