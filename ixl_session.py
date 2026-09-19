@@ -32,16 +32,16 @@ class IXLSession(BaseStatsScraper):
             self.driver.save_screenshot("ixl_login_error.png")
             raise
 
-    def select_date_range(self, option="Today"):
+    def select_date_range(self):
         try:
             self.click_element(By.CSS_SELECTOR, ".date-range .option-select.global .select-open")
-            self.click_element(By.XPATH, f"//div[@class='option' and contains(text(), '{option}')]")
+            self.click_element(By.XPATH, "//div[@class='option' and contains(text(), 'Today')]")
             self.wait.until(
                 EC.text_to_be_present_in_element(
-                    (By.CSS_SELECTOR, ".date-range .option-selection"), option
+                    (By.CSS_SELECTOR, ".date-range .option-selection"), "Today"
                 )
             )
-            self.logger.info(f"Selected date range: {option}")
+            self.logger.info("Selected date range: Today")
         except Exception as e:
             self.logger.error(f"Failed to select date range: {e!s}")
             self.driver.save_screenshot("ixl_date_range_error.png")
