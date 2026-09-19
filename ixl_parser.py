@@ -53,9 +53,7 @@ def process_table_html(table_html: str) -> str:
 
     header = soup.new_tag("tr")
     for text in HEADERS:
-        header.append(
-            _cell(soup, "th", text, f"{CELL_STYLE} background-color: #f2f2f2;")
-        )
+        header.append(_cell(soup, "th", text, f"{CELL_STYLE} background-color: #f2f2f2;"))
     table.append(header)
 
     for row in soup.select('div[class*="row"]'):
