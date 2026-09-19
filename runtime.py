@@ -9,6 +9,20 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 
 
+def require_env(name):
+    value = os.environ.get(name)
+    if not value:
+        raise ValueError(f"{name} not set in environment variables")
+    return value
+
+
+def require_csv_env(name, empty_message):
+    values = [value.strip() for value in require_env(name).split(",") if value.strip()]
+    if not values:
+        raise ValueError(empty_message)
+    return values
+
+
 def setup_driver():
     chrome_options = Options()
     headless_mode = os.environ.get("HEADLESS", "true").lower() == "true"
