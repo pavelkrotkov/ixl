@@ -1,9 +1,6 @@
 from bs4 import BeautifulSoup
 
 CELL_STYLE = "border: 1px solid #ddd; padding: 8px;"
-HEADER_STYLE = f"{CELL_STYLE} background-color: #f2f2f2;"
-SUBJECT_STYLE = f"{CELL_STYLE} font-weight: bold; background-color: #e6e6e6;"
-CATEGORY_STYLE = f"{CELL_STYLE} font-style: italic; background-color: #f9f9f9;"
 HEADERS = (
     "Subject/Category/Skill",
     "Code",
@@ -56,7 +53,7 @@ def process_table_html(table_html: str) -> str:
 
     header = soup.new_tag("tr")
     for text in HEADERS:
-        header.append(_cell(soup, "th", text, HEADER_STYLE))
+        header.append(_cell(soup, "th", text, f"{CELL_STYLE} background-color: #f2f2f2;"))
     table.append(header)
 
     for row in soup.select('div[class*="row"]'):
@@ -64,9 +61,9 @@ def process_table_html(table_html: str) -> str:
         if not isinstance(classes, list):
             continue
         if "subject-grade-row" in classes:
-            table.append(_cell_row(soup, row.get_text().strip(), SUBJECT_STYLE))
+            table.append(_cell_row(soup, row.get_text().strip(), f"{CELL_STYLE} font-weight: bold; background-color: #e6e6e6;"))
         elif "category-row" in classes:
-            table.append(_cell_row(soup, row.get_text().strip(), CATEGORY_STYLE))
+            table.append(_cell_row(soup, row.get_text().strip(), f"{CELL_STYLE} font-style: italic; background-color: #f9f9f9;"))
         elif "skill-row" in classes:
             table.append(_skill_row(soup, row))
 
