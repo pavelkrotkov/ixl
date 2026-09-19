@@ -1,7 +1,17 @@
 import json
 import subprocess
 
-FILES = ["get_stats.py", "ixl_parser.py", "progress.py", "report.py"]
+FILES = [
+    "get_stats.py",
+    "ixl_parser.py",
+    "ixl_scraper.py",
+    "ixl_session.py",
+    "math_academy_scraper.py",
+    "progress.py",
+    "report.py",
+    "runtime.py",
+    "scraper_base.py",
+]
 
 
 def _radon(command):
