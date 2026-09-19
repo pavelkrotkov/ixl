@@ -57,6 +57,179 @@ class BaseStatsScraper(ABC):
         pass
 
     @abstractmethod
+    def process_student_data(self, student_id):
+        pass
+
+    @abstractmethod
+    def get_stats(self, *args, **kwargs):
+        pass
+
+
+class IXLStatsScraper(BaseStatsScraper):
+    def __init__(self, driver):
+        super().__init__(driver)
+        self.login_url = "https://www.ixl.com/analytics/student-usage#"
+
+    def login(self, username, password):
+        try:
+            self.driver.get(self.login_url)
+            self.find_element(By.ID, "qlusername").send_keys(username)
+            self.find_element(By.ID, "qlpassword").send_keys(password)
+            self.click_element(By.ID, "qlsubmit")
+            self.logger.info("Successfully logged in to IXL")
+
+            self.find_element(By.CSS_SELECTOR, "label[data-cy^='subaccount-selection-']")
+            parent_subaccount = self.find_element(
+                By.XPATH,
+                "//label[contains(@data-cy, 'subaccount-selection-') and .//span[text()='Parent']]",
+            )
+            parent_subaccount.click()
+            self.logger.info("Selected 'Parent' subaccount")
+        except Exception as e:
+            self.logger.error(f"Login or subaccount selection failed: {e!s}")
+            self.driver.save_screenshot("ixl_login_error.png")
+            raise
+
+    def select_date_range(self, option="Today"):
+        try:
+            self.find_element(By.CSS_SELECTOR, ".date-range")
+            self.click_element(By.CSS_SELECTOR, ".date-range .option-select.global .select-open")
+            self.find_element(By.CSS_SELECTOR, ".date-range .select-body")
+            self.click_element(By.XPATH, f"//div[@class='option' and contains(text(), '{option}')]")
+            self.wait.until(
+                EC.text_to_be_present_in_element(
+                    (By.CSS_SELECTOR, ".date-range .option-selection"), option
+                )
+            )
+            self.logger.info(f"Selected date range: {option}")
+        except Exception as e:
+            self.logger.error(f"Failed to select date range: {e!s}")
+            self.driver.save_screenshot("ixl_date_range_error.png")
+            raise
+
+    def get_student_options(self):
+        self.click_element(By.CSS_SELECTOR, ".student-select .option-select.global .select-open")
+        self.find_element(By.CSS_SELECTOR, ".student-select .select-body")
+        return self.driver.find_elements(
+            By.CSS_SELECTOR,
+            ".option-select.global.default.active .select-dropdown .option",
+        )
+
+    def select_student(self, student_name):
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            try:
+                for student in self.get_student_options():
+                    if student.get_attribute("data-name") == student_name:
+                        student.click()
+                        self.wait.until(
+                            EC.text_to_be_present_in_element(
+                                (By.CSS_SELECTOR, ".student-select .option-selection"),
+                                student_name,
+                            )
+                        )
+                        return True
+            except StaleElementReferenceException:
+                if attempt < max_attempts - 1:
+                    self.logger.warning(
+                        f"Stale element encountered when selecting {student_name}. Retrying..."
+                    )
+                    time.sleep(3)
+                else:
+                    self.logger.error(
+                        f"Failed to select student {student_name} after {max_attempts} attempts."
+                    )
+                    return False
+        return False
+
+    def process_student_data(self, student_id: str) -> IXLStudentProgress | None:
+        student_name = student_id
+        try:
+            time.sleep(3)
+            stats_element = self.find_element(By.CSS_SELECTOR, ".summary-stat-container")
+            stats_text = " ".join(stats_element.text.split()).lower()
+            self.logger.info(f"IXL Stats for {student_name}: {stats_text}")
+
+            progress_table = None
+            if "answered 0 questions spent 0 min practicing made progress in 0 skills" in stats_text:
+                self.logger.info(f"No progress to report for {student_name}")
+            else:
+                table_html = self.get_progress_and_improvement_data(student_name)
+                progress_table = process_table_html(table_html) if table_html else None
+
+            return IXLStudentProgress(student_name, stats_text, progress_table)
+        except Exception as e:
+            self.logger.error(f"Error processing IXL data for {student_name}: {e!s}")
+            return None
+
+    def get_progress_and_improvement_data(self, student_name: str) -> str | None:
+        try:
+            self.driver.get("https://www.ixl.com/analytics/progress-and-improvement")
+            self.logger.info(f"Navigated to Progress and Improvement page for {student_name}")
+            time.sleep(3)
+
+            table = self.find_element(By.CSS_SELECTOR, ".student-improvement-table")
+            table_html = table.get_attribute("outerHTML")
+
+            self.driver.get(self.login_url)
+            self.logger.info(f"Navigated back to main analytics page for {student_name}")
+            return table_html
+        except Exception as e:
+            self.logger.error(
+                f"Error extracting IXL progress and improvement data for {student_name}: {e!s}"
+            )
+            self.driver.save_screenshot(f"ixl_progress_improvement_error_{student_name}.png")
+            raise
+
+    def get_stats(self, username, password) -> list[IXLStudentProgress]:
+        data = []
+        try:
+            self.login(username, password)
+            self.select_date_range("Today")
+            student_names = [
+                name
+                for student in self.get_student_options()
+                if (name := student.get_attribute("data-name"))
+            ]
+
+            for student_name in student_names:
+                self.logger.info(f"Processing IXL student: {student_name}")
+                if not self.select_student(student_name):
+                    self.logger.warning(f"Failed to select IXL student: {student_name}")
+                    continue
+                if student_data := self.process_student_data(student_name):
+                    data.append(student_data)
+        except Exception as e:
+            self.logger.error(f"An error occurred during IXL stats collection: {e!s}")
+        return data
+
+
+class MathAcademyStatsScraper(BaseStatsScraper):
+    def __init__(self, driver):
+        super().__init__(driver)
+        self.login_url = "https://mathacademy.com/login"
+        self.base_activity_url = "https://mathacademy.com/students/{}/activity"
+
+    def login(self, username, password):
+        try:
+            self.driver.get(self.login_url)
+
+            username_field = self.find_element(By.ID, "usernameOrEmail")
+            username_field.clear()
+            username_field.send_keys(username)
+
+            password_field = self.find_element(By.ID, "password")
+            password_field.clear()
+            password_field.send_keys(password)
+
+            self.click_element(By.ID, "loginButton")
+            WebDriverWait(self.driver, 10).until(EC.url_changes(self.login_url))
+            self.logger.info("Successfully logged in to Math Academy")
+        except Exception as e:
+            self.logger.error(f"Login failed for Math Academy: {e!s}")
+            self.driver.save_screenshot("math_academy_login_error.png")
+            raise
+
     def process_student_data(self, student_id: str) -> MathAcademyStudentProgress | None:
         try:
             self.driver.get(self.base_activity_url.format(student_id))
