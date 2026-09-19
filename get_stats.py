@@ -1,4 +1,5 @@
 import logging
+
 from ixl_scraper import IXLStatsScraper
 from math_academy_scraper import MathAcademyStatsScraper
 from progress import IXLStudentProgress, MathAcademyStudentProgress
