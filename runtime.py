@@ -23,6 +23,10 @@ def require_csv_env(name, empty_message):
     return values
 
 
+def env_enabled(name):
+    return os.environ.get(name, "false").lower() == "true"
+
+
 def setup_driver():
     chrome_options = Options()
     headless_mode = os.environ.get("HEADLESS", "true").lower() == "true"
