@@ -151,7 +151,10 @@ class IXLStatsScraper(BaseStatsScraper):
             self.logger.info(f"IXL Stats for {student_name}: {stats_text}")
 
             progress_table = None
-            if "answered 0 questions spent 0 min practicing made progress in 0 skills" in stats_text:
+            if (
+                "answered 0 questions spent 0 min practicing made progress in 0 skills"
+                in stats_text
+            ):
                 self.logger.info(f"No progress to report for {student_name}")
             else:
                 table_html = self.get_progress_and_improvement_data(student_name)
