@@ -38,7 +38,7 @@ def test_process_table_html_without_browser():
 
 def test_build_report_from_typed_progress():
     html = build_report(
-        [IXLStudentProgress("Maya", "answered 8 questions", IXL_TABLE)],
+        [IXLStudentProgress("Maya", "answered 8 questions", process_table_html(IXL_TABLE))],
         [MathAcademyStudentProgress("1", "Luca", "25", "30", "100", ACTIVITY)],
     )
 
