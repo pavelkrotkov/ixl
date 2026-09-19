@@ -1,47 +1,31 @@
 import logging
-import os
-
 from ixl_scraper import IXLStatsScraper
 from math_academy_scraper import MathAcademyStatsScraper
 from progress import IXLStudentProgress, MathAcademyStudentProgress
 from report import build_report
-from runtime import send_email, setup_driver
+from runtime import require_csv_env, require_env, send_email, setup_driver
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
 
-def _require_env(name):
-    value = os.environ.get(name)
-    if not value:
-        raise ValueError(f"{name} not set in environment variables")
-    return value
-
-
-def _require_csv_env(name, empty_message):
-    values = [value.strip() for value in _require_env(name).split(",") if value.strip()]
-    if not values:
-        raise ValueError(empty_message)
-    return values
-
-
 def main():
     logger = logging.getLogger(__name__)
 
-    ixl_username = _require_env("IXL_USERNAME")
-    ixl_password = _require_env("IXL_PASSWORD")
-    mathacademy_username = _require_env("MATHACADEMY_USERNAME")
-    mathacademy_password = _require_env("MATHACADEMY_PASSWORD")
-    mathacademy_student_ids = _require_csv_env(
+    ixl_username = require_env("IXL_USERNAME")
+    ixl_password = require_env("IXL_PASSWORD")
+    mathacademy_username = require_env("MATHACADEMY_USERNAME")
+    mathacademy_password = require_env("MATHACADEMY_PASSWORD")
+    mathacademy_student_ids = require_csv_env(
         "MATHACADEMY_STUDENT_IDS", "MATHACADEMY_STUDENT_IDS must contain at least one ID"
     )
-    gmail_user = _require_env("GMAIL_USER")
-    gmail_app_password = _require_env("GMAIL_APP_PASSWORD")
-    recipients = _require_csv_env(
+    gmail_user = require_env("GMAIL_USER")
+    gmail_app_password = require_env("GMAIL_APP_PASSWORD")
+    recipients = require_csv_env(
         "RECIPIENT_EMAILS", "RECIPIENT_EMAILS must contain at least one address"
     )
-    send_email_enabled = os.environ.get("SEND_EMAIL", "false").lower() == "true"
+    send_email_enabled = require_env("SEND_EMAIL").lower() == "true"
 
     driver = setup_driver()
     ixl_data: list[IXLStudentProgress] = []
