@@ -182,7 +182,7 @@ class IXLStatsScraper(BaseStatsScraper):
                 f"Error extracting IXL progress and improvement data for {student_name}: {e!s}"
             )
             self.driver.save_screenshot(f"ixl_progress_improvement_error_{student_name}.png")
-            raise
+            return None
 
     def get_stats(self, username, password) -> list[IXLStudentProgress]:
         data = []
